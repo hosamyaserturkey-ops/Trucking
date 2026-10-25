@@ -1,0 +1,63 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BookOpen,
+  Building2,
+  History,
+  List,
+  MapPin,
+  Route,
+  ShieldCheck,
+  Store,
+  Truck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import type { NavItem } from "@/lib/roles";
+
+const ICONS: Record<string, LucideIcon> = {
+  truck: Truck,
+  route: Route,
+  list: List,
+  users: Users,
+  building: Building2,
+  store: Store,
+  map: MapPin,
+  book: BookOpen,
+  shield: ShieldCheck,
+  history: History,
+};
+
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/" || pathname.startsWith("/trucks");
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function NavLinks({ items }: { items: NavItem[] }) {
+  const pathname = usePathname();
+  return (
+    <ul className="flex flex-col gap-0.5">
+      {items.map((item) => {
+        const Icon = ICONS[item.icon] ?? List;
+        const active = isActive(pathname, item.href);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              onClick={(e) => e.currentTarget.closest("details")?.removeAttribute("open")}
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-text"
+              }`}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden />
+              {item.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

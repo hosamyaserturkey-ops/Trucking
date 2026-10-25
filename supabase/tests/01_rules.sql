@@ -169,6 +169,19 @@ begin
     where f.principal_base_minor <> (select sum(i.principal_base_minor) from public.financing_installments i where i.financing_id = f.id)
   ), 'installment principal sums to the financed amount');
 
+  perform pg_temp.check(
+    (select sum(amount_base_minor) from public.truck_pnl_summary(current_date - 200, current_date + 1))
+      = (select sum(amount_base_minor) from public.truck_pnl_facts_v
+         where fact_date >= current_date - 200 and fact_date < current_date + 1),
+    'P&L summary function matches the facts it aggregates');
+  perform pg_temp.check(
+    (select sum(amount_base_minor) from public.truck_pnl_monthly(
+       (select id from public.trucks where code = 'T-01'), current_date - 200, current_date + 1))
+      = (select sum(amount_base_minor) from public.truck_pnl_facts_v
+         where truck_id = (select id from public.trucks where code = 'T-01')
+           and fact_date >= current_date - 200 and fact_date < current_date + 1),
+    'monthly P&L function matches the facts for one truck');
+
   -- km/L, full-tank method: 500 km on 50 + 100 liters = 3.33
   insert into public.trucks (code, plate_number) values ('TEST-1', 'TEST-0001') returning id into t;
   insert into public.fuel_fillups (truck_id, filled_at, odometer, liters, is_full_tank, amount_minor) values
