@@ -97,9 +97,9 @@ export default async function FleetPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-bold">
+                          <p className="flex items-baseline gap-2 font-bold">
                             <span className="num">{t.code}</span>
-                            <span className="num ms-2 text-sm font-medium text-muted">{t.plate_number}</span>
+                            <span className="num text-sm font-medium text-muted">{t.plate_number}</span>
                           </p>
                           <p className="mt-0.5 truncate text-sm text-muted">
                             {[t.make, t.model, t.year].filter(Boolean).join(" ")}
@@ -153,8 +153,7 @@ export default async function FleetPage() {
                         className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2"
                       >
                         <span className="min-w-0">
-                          <span className="num font-semibold">{d.truck_code}</span>
-                          <span className="ms-2">{DOC_TYPE[d.doc_type ?? "other"]}</span>
+                          <span className="num font-semibold">{d.truck_code}</span> <span>{DOC_TYPE[d.doc_type ?? "other"]}</span>
                           <span className="block text-xs text-muted">{formatDate(d.expiry_date)}</span>
                         </span>
                         <Badge tone={band.tone}>
@@ -190,8 +189,7 @@ export default async function FleetPage() {
                         className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2"
                       >
                         <span className="min-w-0">
-                          <span className="num font-semibold">{codeById.get(s.truck_id) ?? ""}</span>
-                          <span className="ms-2">{s.service_name}</span>
+                          <span className="num font-semibold">{codeById.get(s.truck_id) ?? ""}</span> <span>{s.service_name}</span>
                           <span className="block text-xs text-muted">
                             {s.km_left !== null ? (
                               <>

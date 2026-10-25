@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { homeFor } from "@/lib/roles";
 
 export type SignInState = { error: string | null };
 
@@ -19,10 +20,12 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
   if (!parsed.success) return { error: "أدخل بريداً إلكترونياً وكلمة مرور صحيحين" };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" };
 
-  redirect("/");
+  // Go straight to the role's home page (drivers -> /my, no role yet -> /pending).
+  const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", data.user.id).maybeSingle();
+  redirect(profile?.role ? homeFor(profile.role) : "/pending");
 }
 
 export async function signOut() {

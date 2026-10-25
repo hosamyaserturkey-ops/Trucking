@@ -77,8 +77,8 @@ export function PnlChart({ data }: { data: PnlPoint[] }) {
               tickFormatter={(v: number) => compact.format(v)}
             />
             <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--surface-2)" }} />
-            <Bar dataKey="revenue" name="الإيرادات" fill="var(--chart-revenue)" radius={[4, 4, 0, 0]} maxBarSize={28} />
-            <Bar dataKey="costs" name="التكاليف" fill="var(--chart-cost)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="revenue" name="الإيرادات" fill="var(--chart-revenue)" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
+            <Bar dataKey="costs" name="التكاليف" fill="var(--chart-cost)" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
             <Line
               dataKey="profit"
               name="صافي الربح"
@@ -87,6 +87,7 @@ export function PnlChart({ data }: { data: PnlPoint[] }) {
               strokeWidth={2}
               dot={{ r: 4, fill: "var(--chart-profit)", stroke: "var(--surface)", strokeWidth: 2 }}
               activeDot={{ r: 5 }}
+              isAnimationActive={false}
             />
           </ComposedChart>
         </ResponsiveContainer>

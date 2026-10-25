@@ -171,7 +171,10 @@ export default async function TruckMaintenancePage(props: TruckPageProps) {
       </Card>
 
       <Card>
-        <CardHeader title="الإطارات حسب الموقع" subtitle="منظر علوي، مقدمة الشاحنة في الأعلى" />
+        <CardHeader
+          title="الإطارات حسب الموقع"
+          subtitle="منظر علوي، مقدمة الشاحنة في الأعلى. F أمامي، D1 وD2 محورا الدفع، L/R يسار/يمين، O/I خارجي/داخلي."
+        />
         <CardBody>
           <TireMap current={current} odometer={truck.odometer} />
         </CardBody>
@@ -224,23 +227,26 @@ function TireMap({ current, odometer }: { current: Map<string, Installation>; od
       <div
         key={code}
         dir="rtl"
-        className={`w-full rounded-lg border p-2 text-xs ${inst ? "border-border bg-surface-2" : "border-dashed border-danger text-danger"}`}
-        title={label}
+        className={`min-w-0 flex-1 rounded-lg border p-1.5 text-[11px] leading-snug sm:p-2 sm:text-xs ${
+          inst ? "border-border bg-surface-2" : "border-dashed border-danger text-danger"
+        }`}
+        title={`${label}${inst ? ` · ${inst.tire?.serial_no} · ${inst.tire?.brand ?? ""}` : ""}`}
       >
-        <p className="font-medium">{label}</p>
+        <p className="num font-semibold">{code}</p>
+        <p className="hidden font-medium sm:block">{label}</p>
         {inst ? (
           <>
-            <p className="num mt-0.5 text-muted">{inst.tire?.serial_no}</p>
-            <p className="text-muted">
+            <p className="num mt-0.5 hidden break-all text-muted sm:block">{inst.tire?.serial_no}</p>
+            <p className="hidden text-muted sm:block">
               {inst.tire?.brand}
               {inst.tire?.retread_count ? ` · مجدد ${inst.tire.retread_count}` : ""}
             </p>
             <p className="mt-0.5">
-              <span className="num">{formatInt(km)}</span> كم منذ التركيب
+              <span className="num">{formatInt(km)}</span> كم
             </p>
           </>
         ) : (
-          <p className="mt-0.5">لا يوجد إطار</p>
+          <p className="mt-0.5">فارغ</p>
         )}
       </div>
     );
@@ -254,10 +260,10 @@ function TireMap({ current, odometer }: { current: Map<string, Installation>; od
           <p dir="rtl" className="mb-1.5 text-center text-xs font-medium text-muted">
             {axle.label}
           </p>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <div className="flex gap-2">{axle.left.map(cell)}</div>
-            <div className="h-1 w-6 rounded bg-border sm:w-16" aria-hidden />
-            <div className="flex gap-2">{axle.right.map(cell)}</div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:gap-2">
+            <div className="flex min-w-0 gap-1 sm:gap-2">{axle.left.map(cell)}</div>
+            <div className="h-1 w-3 rounded bg-border sm:w-16" aria-hidden />
+            <div className="flex min-w-0 gap-1 sm:gap-2">{axle.right.map(cell)}</div>
           </div>
         </div>
       ))}

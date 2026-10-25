@@ -33,6 +33,7 @@ async function login(browser, email, password, viewport) {
   await page.fill("#email", email);
   await page.fill("#password", password);
   await Promise.all([page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20000 }), page.click("button[type=submit]")]);
+  await page.waitForLoadState("networkidle");
   return { context, page };
 }
 
