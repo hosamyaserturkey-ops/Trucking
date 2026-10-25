@@ -20,9 +20,11 @@
   --danger-soft: #fbe6e8;
   --info: #1d5fa8;
   --info-soft: #e5eef9;
-  --chart-revenue: #0d6b5c;
-  --chart-cost: #c8673a;
-  --chart-profit: #1d5fa8;
+  /* Chart series, validated with the dataviz palette checks (light surface #ffffff). */
+  --chart-revenue: #00866f;
+  --chart-cost: #c4612f;
+  --chart-profit: #2563b8;
+  --chart-grid: #e8ecef;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,9 +47,11 @@
     --danger-soft: #3a1a1e;
     --info: #7fb2ec;
     --info-soft: #172739;
-    --chart-revenue: #3fb39d;
-    --chart-cost: #e08a5f;
-    --chart-profit: #7fb2ec;
+    /* Dark steps validated against the dark surface #171e24. */
+    --chart-revenue: #1f9a83;
+    --chart-cost: #cc7044;
+    --chart-profit: #5596de;
+    --chart-grid: #26313a;
   }
 }
 
