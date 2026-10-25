@@ -140,7 +140,7 @@ begin
   create temp table routes (
     id serial, from_name text, to_name text, km integer, intl boolean,
     freight_out numeric, freight_back numeric
-  ) on commit drop;
+  );
   insert into routes (from_name, to_name, km, intl, freight_out, freight_back) values
     ('الزرقاء', 'العقبة', 340, false, 390, 330),
     ('عمّان', 'العقبة', 330, false, 375, 320),
