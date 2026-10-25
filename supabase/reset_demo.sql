@@ -6,6 +6,8 @@
 begin;
 
 truncate
+  public.driver_advances,
+  public.driver_settlements,
   public.journal_lines,
   public.journal_entries,
   public.financing_installments,
