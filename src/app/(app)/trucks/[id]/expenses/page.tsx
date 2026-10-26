@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { truckPage, type TruckPageProps } from "@/lib/truck";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate } from "@/lib/format";
-import { PAYMENT_METHOD } from "@/lib/labels";
+import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 
@@ -17,7 +18,7 @@ export default async function TruckExpensesPage(props: TruckPageProps) {
     supabase
       .from("expenses")
       .select(
-        "id, expense_date, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, category:expense_categories(name_ar), trip:trips(trip_no), driver:drivers(full_name)",
+        "id, expense_date, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, status, category:expense_categories(name_ar), trip:trips(trip_no), driver:drivers(full_name)",
       )
       .eq("truck_id", id)
       .gte("expense_date", range.from)
@@ -38,17 +39,22 @@ export default async function TruckExpensesPage(props: TruckPageProps) {
 
   const byCategory = new Map<string, number>();
   for (const e of expenses) {
+    if (e.status !== "approved") continue;
     const name = (e.category as { name_ar: string } | null)?.name_ar ?? "أخرى";
     byCategory.set(name, (byCategory.get(name) ?? 0) + e.amount_base_minor);
   }
   const categories = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
-  const direct = sumMinor(expenses.map((e) => e.amount_base_minor));
+  const direct = sumMinor(expenses.filter((e) => e.status === "approved").map((e) => e.amount_base_minor));
+  const waiting = expenses.filter((e) => e.status === "submitted").length;
   const allocated = sumMinor(overhead.map((o) => o.amount_base_minor));
 
   return (
     <>
       <Card>
-        <CardHeader title="المصاريف حسب الفئة" subtitle={range.label} />
+        <CardHeader
+          title="المصاريف حسب الفئة"
+          subtitle={`${range.label} · المعتمدة فقط${waiting ? ` · ${waiting} بانتظار الموافقة` : ""}`}
+        />
         {categories.length === 0 && overhead.length === 0 ? (
           <EmptyState>لا توجد مصاريف في هذه الفترة.</EmptyState>
         ) : (
@@ -93,6 +99,7 @@ export default async function TruckExpensesPage(props: TruckPageProps) {
                 <Th>السائق</Th>
                 <Th>الدفع</Th>
                 <Th className="text-end">المبلغ</Th>
+                <Th>الحالة</Th>
               </tr>
             </thead>
             <tbody>
@@ -109,6 +116,9 @@ export default async function TruckExpensesPage(props: TruckPageProps) {
                     {e.currency !== "JOD" ? (
                       <span className="block text-xs text-muted">{formatMoney(e.amount_base_minor)}</span>
                     ) : null}
+                  </Td>
+                  <Td>
+                    <Badge tone={EXPENSE_STATUS[e.status].tone}>{EXPENSE_STATUS[e.status].label}</Badge>
                   </Td>
                 </Tr>
               ))}

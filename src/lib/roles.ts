@@ -12,6 +12,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const STAFF_ROLES: AppRole[] = ["manager", "accountant", "dispatcher"];
 export const FINANCE_ROLES: AppRole[] = ["manager", "accountant"];
 export const MASTER_DATA_WRITERS: AppRole[] = ["manager", "accountant"];
+export const TRIP_WRITERS: AppRole[] = ["manager", "dispatcher"];
 
 export function canSeeFinancials(role: AppRole | null | undefined): boolean {
   return !!role && FINANCE_ROLES.includes(role);
@@ -22,6 +23,9 @@ export type NavItem = { href: string; label: string; icon: string; roles: AppRol
 // Order is the order shown in the sidebar.
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "الأسطول", icon: "truck", roles: STAFF_ROLES },
+  { href: "/trips", label: "الرحلات", icon: "route", roles: STAFF_ROLES },
+  { href: "/approvals", label: "الموافقات", icon: "check", roles: FINANCE_ROLES },
+  { href: "/advances", label: "العهد", icon: "wallet", roles: STAFF_ROLES },
   { href: "/my", label: "رحلاتي", icon: "route", roles: ["driver"] },
   { href: "/master/trucks", label: "الشاحنات", icon: "list", roles: STAFF_ROLES },
   { href: "/master/drivers", label: "السائقون", icon: "users", roles: STAFF_ROLES },

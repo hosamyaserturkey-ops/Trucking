@@ -70,7 +70,7 @@ export const PAYMENT_METHOD: Record<string, string> = {
   own_tank: "خزان الشركة",
   bank: "تحويل بنكي",
   check: "شيك",
-  driver_advance: "من عهدة السائق",
+  driver_advance: "دفعها السائق",
 };
 
 export const SUPPLIER_KIND: Record<string, string> = {
@@ -140,6 +140,12 @@ export const AUDIT_ACTION: Record<string, { label: string; tone: Tone }> = {
   INSERT: { label: "إضافة", tone: "success" },
   UPDATE: { label: "تعديل", tone: "info" },
   DELETE: { label: "حذف", tone: "danger" },
+};
+
+export const EXPENSE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  submitted: { label: "بانتظار الموافقة", tone: "warning" },
+  approved: { label: "معتمد", tone: "success" },
+  rejected: { label: "مرفوض", tone: "danger" },
 };
 
 export type Tone = "neutral" | "success" | "warning" | "danger" | "info";

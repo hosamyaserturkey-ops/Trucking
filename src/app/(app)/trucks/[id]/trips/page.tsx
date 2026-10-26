@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -69,7 +70,11 @@ export default async function TruckTripsPage(props: TruckPageProps) {
               const st = TRIP_STATUS[t.status ?? "planned"];
               return (
                 <Tr key={t.trip_id}>
-                  <Td className="num">{t.trip_no}</Td>
+                  <Td>
+                    <Link href={`/trips/${t.trip_id}`} className="num font-semibold text-primary hover:underline">
+                      {t.trip_no}
+                    </Link>
+                  </Td>
                   <Td className="num whitespace-nowrap">
                     {formatDate(t.start_date)}
                     {t.end_date && t.end_date !== t.start_date ? (

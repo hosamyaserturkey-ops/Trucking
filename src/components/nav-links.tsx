@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Building2,
+  CircleCheck,
   History,
   List,
   MapPin,
@@ -13,6 +14,7 @@ import {
   Store,
   Truck,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { NavItem } from "@/lib/roles";
@@ -28,6 +30,8 @@ const ICONS: Record<string, LucideIcon> = {
   book: BookOpen,
   shield: ShieldCheck,
   history: History,
+  check: CircleCheck,
+  wallet: Wallet,
 };
 
 function isActive(pathname: string, href: string) {
