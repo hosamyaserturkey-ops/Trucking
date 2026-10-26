@@ -81,16 +81,19 @@ export default async function DriverAdvancePage({
       amount_minor: a.amount_minor,
       trip: a.trip as TripRef,
     })),
-    ...(expensesRes.data ?? []).map((e) => ({
-      id: e.id,
-      kind: "expense" as const,
-      date: e.expense_date,
-      base_minor: e.amount_base_minor,
-      label: (e.category as { name_ar: string } | null)?.name_ar ?? e.description,
-      currency: e.currency,
-      amount_minor: e.amount_minor,
-      trip: e.trip as TripRef,
-    })),
+    ...(expensesRes.data ?? []).map((e) => {
+      const category = (e.category as { name_ar: string } | null)?.name_ar;
+      return {
+        id: e.id,
+        kind: "expense" as const,
+        date: e.expense_date,
+        base_minor: e.amount_base_minor,
+        label: category && e.description && e.description !== category ? `${category} · ${e.description}` : (category ?? e.description),
+        currency: e.currency,
+        amount_minor: e.amount_minor,
+        trip: e.trip as TripRef,
+      };
+    }),
   ]);
   const settlements = settlementsRes.data ?? [];
   const justSettled = settled ? settlements.find((s) => s.id === settled) : undefined;
