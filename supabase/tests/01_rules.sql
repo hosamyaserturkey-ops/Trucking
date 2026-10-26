@@ -228,15 +228,18 @@ begin
   select count(*) into n5 from public.accounts;
   select count(*) into n6 from public.profiles;
   update public.profiles set role = 'manager' where user_id = '00000000-0000-4000-8000-0000000000a4';
+  -- Phase 3: drivers send fill-ups paid from the advance, with a receipt from their own folder.
   begin
-    insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor)
-    values (own_truck, drv, now(), 1, 10, 6400);
+    insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
+    values (own_truck, drv, now(), 9999999, 10, 6400, 'driver_advance',
+            '00000000-0000-4000-8000-0000000000a4/2026-10/44444444-4444-4444-8444-444444444444.jpg');
     ok_insert := true;
   exception when others then ok_insert := false;
   end;
   begin
-    insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor)
-    values (other_truck, drv, now(), 1, 10, 6400);
+    insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
+    values (other_truck, drv, now(), 9999999, 10, 6400, 'driver_advance',
+            '00000000-0000-4000-8000-0000000000a4/2026-10/55555555-5555-4555-8555-555555555555.jpg');
     blocked_insert := false;
   exception when insufficient_privilege then blocked_insert := true;
   end;

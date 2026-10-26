@@ -107,9 +107,13 @@ select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000
 select pg_temp.check(exists (select 1 from public.truck_documents where file_path = (select other_path from f)),
   'the scan path was stored on the document');
 select pg_temp.check(pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000c4',
-  format($s$insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, receipt_path)
-            values (%L, %L, now(), 1, 10, 1000, %L)$s$, (select truck_id from f), (select driver_id from f), (select other_path from f))),
+  format($s$insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
+            values (%L, %L, now(), 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select other_path from f))),
   'driver cannot save a fill-up receipt from another user''s folder');
+select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000c4',
+  format($s$insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
+            values (%L, %L, now(), 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select own_path from f))),
+  'the same fill-up with a receipt from his own folder is accepted');
 
 -- Reviewed or settled: receipt frozen ------------------------------------------
 select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000c2',

@@ -290,6 +290,8 @@ export type Database = {
           driver_id: string
           expenses_base_minor: number
           expenses_count: number
+          fuel_base_minor: number
+          fuel_count: number
           id: string
           notes: string | null
           settled_on: string
@@ -304,6 +306,8 @@ export type Database = {
           driver_id: string
           expenses_base_minor: number
           expenses_count?: number
+          fuel_base_minor?: number
+          fuel_count?: number
           id?: string
           notes?: string | null
           settled_on: string
@@ -318,6 +322,8 @@ export type Database = {
           driver_id?: string
           expenses_base_minor?: number
           expenses_count?: number
+          fuel_base_minor?: number
+          fuel_count?: number
           id?: string
           notes?: string | null
           settled_on?: string
@@ -673,7 +679,13 @@ export type Database = {
           odometer: number
           payment_method: string
           receipt_path: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          settlement_id: string | null
           station_id: string | null
+          status: string
+          submitted_by: string | null
           trip_id: string | null
           truck_id: string
           updated_at: string
@@ -694,7 +706,13 @@ export type Database = {
           odometer: number
           payment_method?: string
           receipt_path?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          settlement_id?: string | null
           station_id?: string | null
+          status?: string
+          submitted_by?: string | null
           trip_id?: string | null
           truck_id: string
           updated_at?: string
@@ -715,7 +733,13 @@ export type Database = {
           odometer?: number
           payment_method?: string
           receipt_path?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          settlement_id?: string | null
           station_id?: string | null
+          status?: string
+          submitted_by?: string | null
           trip_id?: string | null
           truck_id?: string
           updated_at?: string
@@ -740,6 +764,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_settlement_fk"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "driver_settlements"
             referencedColumns: ["id"]
           },
           {
@@ -1777,10 +1808,79 @@ export type Database = {
           last_settled_on: string | null
           open_advances_base_minor: number | null
           open_expenses_base_minor: number | null
+          open_fuel_base_minor: number | null
           pending_base_minor: number | null
           pending_count: number | null
+          pending_fuel_count: number | null
         }
         Relationships: []
+      }
+      fuel_alerts_v: {
+        Row: {
+          baseline_km_per_liter: number | null
+          driver_id: string | null
+          driver_name: string | null
+          filled_on: string | null
+          id: string | null
+          km_per_liter: number | null
+          km_since_last_full: number | null
+          liters: number | null
+          odometer: number | null
+          trip_id: string | null
+          truck_code: string | null
+          truck_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_fillups_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trip_profit_v"
+            referencedColumns: ["trip_id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["current_trip_id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["truck_id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_efficiency_v: {
         Row: {
