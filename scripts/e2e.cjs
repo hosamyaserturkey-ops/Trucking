@@ -180,6 +180,29 @@ async function tripAndAdvanceFlow(browser) {
     drv.page.getByRole("button", { name: "إرسال للموافقة" }).click(),
   ]);
 
+  // 4b. Driver sends a diesel fill-up paid from the advance, with its receipt photo.
+  await drv.page.click('a[href^="/my/fuel/new"]');
+  await drv.page.waitForURL(/\/my\/fuel\/new/);
+  check((await drv.page.inputValue("#trip_id")) === tripId, "diesel form defaults to the running trip");
+  const lastOdo = Number((/([\d,]+) كم/.exec(await drv.page.locator("text=آخر قراءة مسجلة").innerText())?.[1] ?? "0").replace(/,/g, ""));
+  await drv.page.fill("#odometer", String(lastOdo + 300));
+  await drv.page.fill("#liters", "120");
+  await drv.page.fill("#amount", "78");
+  await drv.page.fill("#notes", `${stamp} fuel`);
+  check((await drv.page.locator("text=سعر اللتر").innerText()).includes("0.650"), "diesel form shows the price per liter");
+  const fuelSend = drv.page.getByRole("button", { name: "إرسال للموافقة" });
+  await fuelSend.click();
+  await drv.page.locator("main [role=alert]").waitFor({ timeout: 15000 });
+  check((await drv.page.locator("main [role=alert]").innerText()).includes("صوّر إيصال التعبئة"), "a fill-up without its receipt photo is refused");
+  await drv.page.setInputFiles("input[name=photo]", { name: "fuel.jpg", mimeType: "image/jpeg", buffer: jpeg });
+  const fuelForm = await layoutOk(drv.page);
+  check(fuelForm.rtl && fuelForm.noSideScroll, "diesel form is RTL without sideways scroll on a phone");
+  await drv.page.screenshot({ path: path.join(OUT, "driver-fuel-form.png"), fullPage: true });
+  await Promise.all([drv.page.waitForURL(/\/my\?saved=fuel/, { timeout: 30000 }), fuelSend.click()]);
+  const sentFuel = drv.page.locator("li", { hasText: "ديزل · 120.00 لتر" }).filter({ hasText: "بانتظار الموافقة" }).first();
+  check((await sentFuel.count()) === 1, "driver's fill-up waits for approval");
+  check((await sentFuel.locator("a[href^='/files/fuel/']").count()) === 1, "fill-up receipt is attached");
+
   // 5. Driver finishes the trip.
   card = await drv.page.locator("main section").first().innerText();
   await drv.page.fill("input[name=odometer]", String(odometerIn(card, "قراءة البداية") + 320));
@@ -222,6 +245,20 @@ async function tripAndAdvanceFlow(browser) {
   await toReject.waitFor({ state: "detached", timeout: 20000 });
   check(true, "accountant approves one expense and rejects the other");
 
+  // The fill-up: receipt, implied km/L next to the truck's usual figure, then approve.
+  const fillRow = acc.page.locator("li[data-fillup-id]", { hasText: `${stamp} fuel` });
+  check((await fillRow.count()) === 1, "accountant sees the fill-up in approvals");
+  const fuelPhoto = await fillRow.locator("img").evaluate((img) =>
+    img.complete ? img.naturalWidth : new Promise((resolve) => (img.onload = () => resolve(img.naturalWidth))),
+  );
+  check(fuelPhoto > 0, "fill-up receipt photo loads from private storage");
+  check(/كم\/لتر/.test(await fillRow.innerText()), "approvals shows the km/L the fill-up implies");
+  await fillRow.getByRole("button", { name: "اعتماد" }).click();
+  await fillRow.waitFor({ state: "detached", timeout: 20000 });
+  check(true, "accountant approves the fill-up");
+  await acc.page.goto(`${BASE}/trucks/${truckId}/diesel?range=month`);
+  check((await acc.page.locator("tr", { hasText: "120.00" }).count()) >= 1, "approved fill-up shows on the truck's Diesel tab");
+
   await acc.page.goto(`${BASE}/trucks/${truckId}/expenses?range=month`);
   const row = acc.page.locator("tr", { hasText: `${stamp} receipt` });
   check((await row.count()) === 1 && (await row.innerText()).includes("معتمد"), "approved expense shows on the truck's Expenses tab");
@@ -240,6 +277,7 @@ async function tripAndAdvanceFlow(browser) {
   err = await clickAndWait(acc.page, acc.page.getByRole("button", { name: "تسجيل العهدة" }), acc.page.getByText("تم تسجيل العهدة."));
   check(!err, `accountant issues an advance${err ? `: ${err}` : ""}`);
   check((await acc.page.locator("tr", { hasText: stamp }).count()) === 2, "advance and approved expense are open movements");
+  check((await acc.page.locator("tr", { hasText: "ديزل · 120.00 لتر" }).count()) >= 1, "driver-paid diesel is an open movement");
   await acc.page.screenshot({ path: path.join(OUT, "advance-driver.png"), fullPage: true });
   await Promise.all([
     acc.page.waitForURL(/settled=/, { timeout: 20000 }),
@@ -253,6 +291,7 @@ async function tripAndAdvanceFlow(browser) {
   await slip.goto(`${BASE}${slipHref}`);
   const slipText = await slip.locator("main").innerText();
   check(slipText.includes(`${stamp} receipt`) && slipText.includes(stamp), "settlement slip lists the advance and the expense");
+  check(slipText.includes("ديزل دفعه السائق") && slipText.includes("120.00"), "settlement slip lists the diesel");
   await slip.pdf({ path: path.join(OUT, "settlement.pdf"), format: "A4", printBackground: true });
   check(fs.statSync(path.join(OUT, "settlement.pdf")).size > 10000, "settlement slip exports to PDF");
 
@@ -269,6 +308,60 @@ async function tripAndAdvanceFlow(browser) {
   await disp.page.screenshot({ path: path.join(OUT, "return-leg.png"), fullPage: true });
   err = await clickAndWait(disp.page, disp.page.getByRole("button", { name: "إلغاء الرحلة" }), disp.page.locator("main").getByText("ملغاة").first());
   check(!err, `dispatcher cancels the return leg${err ? `: ${err}` : ""}`);
+
+  // 9. Office expenses: an overhead cost, and a truck cost with a receipt on another driver.
+  await acc.page.goto(`${BASE}/expenses/new`);
+  await acc.page.check("input[name=cost_scope][value=overhead]");
+  await acc.page.selectOption("#category_id", { index: 1 });
+  await acc.page.fill("#description", `${stamp} overhead`);
+  await acc.page.fill("#amount", "25");
+  await acc.page.selectOption("#payment_method", "bank");
+  await Promise.all([acc.page.waitForURL(/\/expenses\?saved=1/, { timeout: 30000 }), acc.page.getByRole("button", { name: "حفظ المصروف" }).click()]);
+  check((await acc.page.locator("tr", { hasText: `${stamp} overhead` }).innerText()).includes("عام"), "accountant records an overhead expense");
+
+  await acc.page.goto(`${BASE}/expenses/new`);
+  const otherTruck = await acc.page.locator("#truck_id option").filter({ hasNotText: truckCode }).nth(4).getAttribute("value");
+  await acc.page.selectOption("#truck_id", otherTruck);
+  check((await acc.page.inputValue("#driver_id")) !== "", "the truck's driver is filled in");
+  await acc.page.selectOption("#category_id", { index: 2 });
+  await acc.page.fill("#description", `${stamp} foreign`);
+  await acc.page.fill("#amount", "12");
+  await acc.page.setInputFiles("input[name=photo]", { name: "invoice.jpg", mimeType: "image/jpeg", buffer: jpeg });
+  await Promise.all([acc.page.waitForURL(/\/expenses\?saved=1/, { timeout: 30000 }), acc.page.getByRole("button", { name: "حفظ المصروف" }).click()]);
+  const foreignHref = await acc.page.locator("tr", { hasText: `${stamp} foreign` }).locator("a[href^='/files/expense/']").getAttribute("href");
+  const accForeign = await acc.page.request.get(`${BASE}${foreignHref}`, { maxRedirects: 0 });
+  check(accForeign.status() === 302, "accountant can open the receipt on the other truck's expense");
+  const drvForeign = await drv.page.request.get(`${BASE}${foreignHref}`, { maxRedirects: 0 });
+  check(drvForeign.status() === 404 && !drvForeign.headers()["location"], "a driver gets no link to a receipt on another driver's expense");
+
+  for (const [label, url] of [
+    ["expenses list", "/expenses"],
+    ["diesel log", "/diesel"],
+    ["abnormal diesel", "/diesel?abnormal=1"],
+    ["expense categories", "/master/expense_categories"],
+  ]) {
+    const res = await acc.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(acc.page);
+    check(res.ok() && ok.rtl && ok.noSideScroll && !ok.loadError, `accountant opens the ${label}`);
+  }
+  await acc.page.goto(`${BASE}/diesel`);
+  await acc.page.screenshot({ path: path.join(OUT, "diesel.png"), fullPage: true });
+  await acc.page.goto(`${BASE}/expenses`);
+  await acc.page.screenshot({ path: path.join(OUT, "expenses.png"), fullPage: true });
+
+  const phone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
+  for (const url of ["/diesel", "/expenses", "/approvals"]) {
+    await phone.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(phone.page);
+    check(ok.rtl && ok.noSideScroll, `${url} fits a phone`);
+  }
+  await phone.context.close();
+
+  await disp.page.goto(`${BASE}/expenses`);
+  check(new URL(disp.page.url()).pathname === "/expenses" && (await disp.page.getByRole("link", { name: "مصروف جديد" }).count()) === 0,
+    "dispatcher sees expenses but cannot add them");
+  await disp.page.goto(`${BASE}/expenses/new`);
+  check(new URL(disp.page.url()).pathname !== "/expenses/new", "dispatcher is kept out of the expense form");
 
   for (const s of [drv, disp, acc]) await s.context.close();
 }

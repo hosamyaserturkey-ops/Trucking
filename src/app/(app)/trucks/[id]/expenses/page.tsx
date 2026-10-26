@@ -1,16 +1,18 @@
+import { Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { STAFF_ROLES } from "@/lib/roles";
+import { FINANCE_ROLES, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { truckPage, type TruckPageProps } from "@/lib/truck";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate } from "@/lib/format";
 import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 
 export default async function TruckExpensesPage(props: TruckPageProps) {
-  await requireRole(...STAFF_ROLES);
+  const profile = await requireRole(...STAFF_ROLES);
   const { id, range } = await truckPage(props);
   const supabase = await createClient();
 
@@ -85,7 +87,18 @@ export default async function TruckExpensesPage(props: TruckPageProps) {
       </Card>
 
       <Card>
-        <CardHeader title="تفاصيل المصاريف المباشرة" subtitle="رسوم الطرق والمخالفات ومكافآت السائقين والتأمين والإطارات" />
+        <CardHeader
+          title="تفاصيل المصاريف المباشرة"
+          subtitle="رسوم الطرق والمخالفات ومكافآت السائقين والتأمين والإطارات"
+          action={
+            FINANCE_ROLES.includes(profile.role) ? (
+              <LinkButton href={`/expenses/new?truck=${id}`} variant="secondary">
+                <Plus className="size-4" aria-hidden />
+                مصروف
+              </LinkButton>
+            ) : null
+          }
+        />
         {expenses.length === 0 ? (
           <EmptyState>لا توجد مصاريف مباشرة في هذه الفترة.</EmptyState>
         ) : (

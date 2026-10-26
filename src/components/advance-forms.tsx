@@ -143,7 +143,7 @@ export function SettleForm({
     <form
       action={formAction}
       onSubmit={(e) => {
-        const warn = pendingCount > 0 ? `\nتنبيه: ${pendingCount} مصروف بانتظار الموافقة لن تدخل في هذه التسوية.` : "";
+        const warn = pendingCount > 0 ? `\nتنبيه: ${pendingCount} بند بانتظار الموافقة لن يدخل في هذه التسوية.` : "";
         if (!confirm(`تأكيد التسوية حتى ${onDate}؟\n${outcome}${warn}`)) e.preventDefault();
       }}
       className="flex flex-col gap-3"
@@ -161,7 +161,7 @@ export function SettleForm({
         <dd className="num font-medium">{preview.count}</dd>
         <dt className="text-muted">العهد</dt>
         <dd className="num font-medium">{formatMoney(preview.advances, "JOD")}</dd>
-        <dt className="text-muted">المصاريف المعتمدة</dt>
+        <dt className="text-muted">المصاريف والديزل</dt>
         <dd className="num font-medium">{formatMoney(preview.expenses, "JOD")}</dd>
         <dt className="text-muted">النتيجة</dt>
         <dd className={`font-semibold ${diff > 0 ? "text-warning" : diff < 0 ? "text-success" : ""}`}>{outcome}</dd>

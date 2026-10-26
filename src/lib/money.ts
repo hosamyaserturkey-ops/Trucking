@@ -53,13 +53,14 @@ const ARABIC_DIGITS: Record<string, string> = {
  * Parse user input like "1,234.5" or "١٢٣٤٫٥" into minor units.
  * Returns null for anything that is not a plain amount or has too many decimals.
  */
+/** Turn Arabic-Indic digits and separators into plain "0-9", "." and ",". */
+export function toLatinDigits(input: string): string {
+  return input.replace(/[٠-٩۰-۹]/g, (d) => ARABIC_DIGITS[d]).replace(/٫/g, ".").replace(/٬/g, ",");
+}
+
 export function parseMoney(input: string, currency = "JOD"): bigint | null {
   const units = minorUnits(currency);
-  const normalized = input
-    .trim()
-    .replace(/[٠-٩۰-۹]/g, (d) => ARABIC_DIGITS[d])
-    .replace(/٫/g, ".")
-    .replace(/[,٬\s]/g, "");
+  const normalized = toLatinDigits(input.trim()).replace(/[,\s]/g, "");
   const match = /^(-)?(\d+)(?:\.(\d*))?$/.exec(normalized);
   if (!match) return null;
   const [, sign, whole, frac = ""] = match;

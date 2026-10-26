@@ -13,6 +13,8 @@ export const STAFF_ROLES: AppRole[] = ["manager", "accountant", "dispatcher"];
 export const FINANCE_ROLES: AppRole[] = ["manager", "accountant"];
 export const MASTER_DATA_WRITERS: AppRole[] = ["manager", "accountant"];
 export const TRIP_WRITERS: AppRole[] = ["manager", "dispatcher"];
+// Fill-ups: a dispatcher's entries go to approval (the database enforces it).
+export const FUEL_WRITERS: AppRole[] = ["manager", "accountant", "dispatcher"];
 
 export function canSeeFinancials(role: AppRole | null | undefined): boolean {
   return !!role && FINANCE_ROLES.includes(role);
@@ -26,6 +28,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/trips", label: "الرحلات", icon: "route", roles: STAFF_ROLES },
   { href: "/approvals", label: "الموافقات", icon: "check", roles: FINANCE_ROLES },
   { href: "/advances", label: "العهد", icon: "wallet", roles: STAFF_ROLES },
+  { href: "/diesel", label: "الديزل", icon: "fuel", roles: STAFF_ROLES },
+  { href: "/expenses", label: "المصاريف", icon: "receipt", roles: STAFF_ROLES },
   { href: "/my", label: "رحلاتي", icon: "route", roles: ["driver"] },
   { href: "/master/trucks", label: "الشاحنات", icon: "list", roles: STAFF_ROLES },
   { href: "/master/drivers", label: "السائقون", icon: "users", roles: STAFF_ROLES },
@@ -33,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/master/suppliers", label: "الموردون", icon: "store", roles: STAFF_ROLES },
   { href: "/master/locations", label: "المواقع", icon: "map", roles: STAFF_ROLES },
   { href: "/master/accounts", label: "دليل الحسابات", icon: "book", roles: FINANCE_ROLES },
+  { href: "/master/expense_categories", label: "أنواع المصاريف", icon: "list", roles: FINANCE_ROLES },
   { href: "/settings/users", label: "المستخدمون", icon: "shield", roles: ["manager"] },
   { href: "/audit", label: "سجل التدقيق", icon: "history", roles: ["manager"] },
 ];

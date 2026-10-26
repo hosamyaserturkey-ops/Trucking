@@ -32,19 +32,21 @@ begin
 
     -- Approved, paid by the driver, not yet settled.
     km := 380 + (random() * 200)::integer;
+    odo := odo + km;
     approved_liters := round(km / coalesce(r.expected_km_per_liter, 2.8), 2);
     insert into public.fuel_fillups (truck_id, driver_id, trip_id, filled_at, odometer, liters, is_full_tank,
                                      currency, amount_minor, fx_rate, payment_method, status, notes)
-    values (r.truck_id, r.driver_id, r.trip_id, at_time, odo + km, approved_liters, true,
+    values (r.truck_id, r.driver_id, r.trip_id, at_time, odo, approved_liters, true,
             'JOD', round(approved_liters * 650), 1, 'driver_advance', 'approved', 'دفعها السائق من العهدة');
 
-    -- Waiting for approval (first 6 drivers). The 3rd one burns far more than usual.
+    -- Waiting for approval (first 6 drivers), measured from the approved full tank
+    -- above. The 3rd one burns far more than usual, so Approvals flags it.
     if n <= 6 then
       km := 300 + (random() * 150)::integer;
       pending_liters := round(km / (coalesce(r.expected_km_per_liter, 2.8) * case when n = 3 then 0.65 else 0.98 end), 2);
       insert into public.fuel_fillups (truck_id, driver_id, trip_id, filled_at, odometer, liters, is_full_tank,
                                        currency, amount_minor, fx_rate, payment_method, status, notes)
-      values (r.truck_id, r.driver_id, r.trip_id, at_time + interval '20 hours', odo + 600 + km, pending_liters, true,
+      values (r.truck_id, r.driver_id, r.trip_id, at_time + interval '20 hours', odo + km, pending_liters, true,
               'JOD', round(pending_liters * 650), 1, 'driver_advance', 'submitted', 'بانتظار موافقة المحاسب');
     end if;
   end loop;

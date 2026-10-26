@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { openLedger } from "@/lib/advances";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatInt } from "@/lib/format";
+import { formatDate, formatDecimal, formatInt } from "@/lib/format";
 import { issueAdvance, settleDriver } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton, buttonClass } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export default async function DriverAdvancePage({
   if (!UUID.test(driverId)) notFound();
   const supabase = await createClient();
 
-  const [balanceRes, advancesRes, expensesRes, settlementsRes, tripsRes, currenciesRes] = await Promise.all([
+  const [balanceRes, advancesRes, expensesRes, settlementsRes, tripsRes, currenciesRes, fuelRes] = await Promise.all([
     supabase.from("driver_advance_balance_v").select("*").eq("driver_id", driverId).maybeSingle(),
     supabase
       .from("driver_advances")
@@ -65,6 +65,14 @@ export default async function DriverAdvancePage({
       .order("start_date", { ascending: false })
       .limit(15),
     supabase.from("currencies").select("code, rate_to_base"),
+    // Diesel the driver paid from the advance, approved and not settled yet.
+    supabase
+      .from("fuel_fillups")
+      .select("id, filled_at, liters, odometer, currency, amount_minor, amount_base_minor, trip:trips(id, trip_no)")
+      .eq("driver_id", driverId)
+      .is("settlement_id", null)
+      .eq("status", "approved")
+      .eq("payment_method", "driver_advance"),
   ]);
   const balance = balanceRes.data;
   if (!balance) notFound();
@@ -94,6 +102,17 @@ export default async function DriverAdvancePage({
         trip: e.trip as TripRef,
       };
     }),
+    ...(fuelRes.data ?? []).map((f) => ({
+      id: f.id,
+      kind: "expense" as const,
+      // Same date rule as settle_driver_advance: the fill-up's day in Amman.
+      date: todayIso(new Date(f.filled_at)),
+      base_minor: f.amount_base_minor,
+      label: `ديزل · ${formatDecimal(Number(f.liters))} لتر · العداد ${formatInt(f.odometer)}`,
+      currency: f.currency,
+      amount_minor: f.amount_minor,
+      trip: f.trip as TripRef,
+    })),
   ]);
   const settlements = settlementsRes.data ?? [];
   const justSettled = settled ? settlements.find((s) => s.id === settled) : undefined;
@@ -130,11 +149,15 @@ export default async function DriverAdvancePage({
         <StatGrid>
           <Stat label="الرصيد" value={<BalanceText minor={balance.balance_base_minor ?? 0} />} />
           <Stat label="عهد مفتوحة" value={formatMoney(balance.open_advances_base_minor, "JOD")} />
-          <Stat label="مصاريف معتمدة دفعها" value={formatMoney(balance.open_expenses_base_minor, "JOD")} />
+          <Stat
+            label="مصاريف وديزل دفعها"
+            value={formatMoney(balance.open_expenses_base_minor, "JOD")}
+            hint={`منها ديزل ${formatMoney(balance.open_fuel_base_minor ?? 0, "JOD")}`}
+          />
           <Stat
             label="بانتظار الموافقة"
             value={formatMoney(balance.pending_base_minor, "JOD")}
-            hint={`${formatInt(pendingCount)} مصروف`}
+            hint={`${formatInt(pendingCount)} بند`}
             tone={pendingCount ? "warning" : "neutral"}
           />
         </StatGrid>
@@ -142,7 +165,7 @@ export default async function DriverAdvancePage({
         {pendingCount > 0 ? (
           <p className="flex flex-wrap items-center gap-2 rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
             <AlertTriangle className="size-4" aria-hidden />
-            لدى السائق {formatInt(pendingCount)} مصروف بانتظار الموافقة ولن تدخل في التسوية قبل مراجعتها.
+            لدى السائق {formatInt(pendingCount)} مصروف أو تعبئة بانتظار الموافقة ولن تدخل في التسوية قبل مراجعتها.
             {finance ? (
               <Link href="/approvals" className="font-semibold underline">
                 مراجعتها الآن

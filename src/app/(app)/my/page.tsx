@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Paperclip, Plus } from "lucide-react";
+import { CheckCircle2, Fuel, Paperclip, Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
+import { todayIso } from "@/lib/date-range";
+import { formatDate, formatDecimal, formatInt } from "@/lib/format";
 import { EXPENSE_STATUS, PAYMENT_METHOD, TRIP_STATUS } from "@/lib/labels";
-import { deleteDriverExpense, driverTripAction } from "./actions";
+import { deleteDriverExpense, deleteDriverFillup, driverTripAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
@@ -47,9 +48,11 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
       .limit(20),
     supabase
       .from("fuel_fillups")
-      .select("id, filled_at, odometer, liters, is_full_tank")
+      .select(
+        "id, filled_at, odometer, liters, is_full_tank, currency, amount_minor, payment_method, status, rejection_reason, receipt_path, settlement_id, trip:trips(trip_no)",
+      )
       .order("filled_at", { ascending: false })
-      .limit(10),
+      .limit(20),
   ]);
   const driver = driverRes.data;
   const trips = tripsRes.data ?? [];
@@ -80,6 +83,67 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
 
   const bal = balance?.balance_base_minor ?? 0;
 
+  // Expenses and diesel in one list, newest first.
+  type Item = {
+    key: string;
+    sortAt: string;
+    title: string;
+    date: string;
+    tripNo: number | null;
+    detail: string | null;
+    payment: string | null;
+    currency: string;
+    amount_minor: number;
+    status: string;
+    rejection_reason: string | null;
+    fileHref: string | null;
+    editHref: string | null;
+    withdraw: (() => Promise<{ error: string | null }>) | null;
+  };
+  const items: Item[] = [
+    ...expenses.map((e): Item => {
+      const category = e.category as { name_ar: string } | null;
+      const editable = e.status === "submitted" && !e.settlement_id;
+      return {
+        key: `e-${e.id}`,
+        sortAt: e.expense_date,
+        title: category?.name_ar ?? "مصروف",
+        date: e.expense_date,
+        tripNo: (e.trip as { trip_no: number } | null)?.trip_no ?? null,
+        detail: e.description && e.description !== category?.name_ar ? e.description : null,
+        payment: e.payment_method,
+        currency: e.currency,
+        amount_minor: e.amount_minor,
+        status: e.status,
+        rejection_reason: e.rejection_reason,
+        fileHref: e.receipt_path ? `/files/expense/${e.id}` : null,
+        editHref: editable ? `/my/expense/${e.id}` : null,
+        withdraw: editable ? deleteDriverExpense.bind(null, e.id) : null,
+      };
+    }),
+    ...fills.map((f): Item => {
+      const editable = f.status === "submitted" && !f.settlement_id;
+      return {
+        key: `f-${f.id}`,
+        sortAt: f.filled_at,
+        title: `ديزل · ${formatDecimal(f.liters)} لتر`,
+        date: todayIso(new Date(f.filled_at)),
+        tripNo: (f.trip as { trip_no: number } | null)?.trip_no ?? null,
+        detail: `العداد ${formatInt(f.odometer)}${f.is_full_tank ? "" : " · تعبئة جزئية"}`,
+        payment: f.payment_method,
+        currency: f.currency,
+        amount_minor: f.amount_minor,
+        status: f.status,
+        rejection_reason: f.rejection_reason,
+        fileHref: f.receipt_path ? `/files/fuel/${f.id}` : null,
+        editHref: editable ? `/my/fuel/${f.id}` : null,
+        withdraw: editable ? deleteDriverFillup.bind(null, f.id) : null,
+      };
+    }),
+  ]
+    .sort((a, b) => b.sortAt.localeCompare(a.sortAt))
+    .slice(0, 25);
+
   return (
     <>
       <PageHeader
@@ -94,7 +158,7 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
         {saved ? (
           <p role="status" className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm text-success">
             <CheckCircle2 className="size-4" aria-hidden />
-            تم إرسال المصروف للموافقة.
+            {saved === "fuel" ? "تم إرسال تعبئة الديزل للموافقة." : "تم إرسال المصروف للموافقة."}
           </p>
         ) : null}
 
@@ -153,72 +217,77 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
               hint={balance?.last_settled_on ? `آخر تسوية ${formatDate(balance.last_settled_on)}` : "لا توجد تسوية سابقة"}
             />
             <Stat label="عهد مستلمة" value={formatMoney(balance?.open_advances_base_minor ?? 0, "JOD")} hint="منذ آخر تسوية" />
-            <Stat label="مصاريف معتمدة دفعتها" value={formatMoney(balance?.open_expenses_base_minor ?? 0, "JOD")} hint="تُخصم من العهدة" />
+            <Stat
+              label="مصاريف وديزل معتمدة"
+              value={formatMoney(balance?.open_expenses_base_minor ?? 0, "JOD")}
+              hint={`منها ديزل ${formatMoney(balance?.open_fuel_base_minor ?? 0, "JOD")}`}
+            />
             <Stat
               label="بانتظار الموافقة"
               value={formatMoney(balance?.pending_base_minor ?? 0, "JOD")}
-              hint={`${formatInt(balance?.pending_count ?? 0)} مصروف`}
+              hint={`${formatInt(balance?.pending_count ?? 0)} بند`}
               tone={(balance?.pending_count ?? 0) > 0 ? "warning" : "neutral"}
             />
           </StatGrid>
-          <LinkButton href={current ? `/my/expense/new?trip=${current.id}` : "/my/expense/new"} variant="primary" className="w-full py-3 text-base sm:w-fit">
-            <Plus className="size-5" aria-hidden />
-            مصروف
-          </LinkButton>
+          <div className="grid grid-cols-2 gap-3 sm:flex">
+            <LinkButton href={current ? `/my/expense/new?trip=${current.id}` : "/my/expense/new"} variant="primary" className="py-3 text-base">
+              <Plus className="size-5" aria-hidden />
+              مصروف
+            </LinkButton>
+            <LinkButton href={current ? `/my/fuel/new?trip=${current.id}` : "/my/fuel/new"} variant="primary" className="py-3 text-base">
+              <Fuel className="size-5" aria-hidden />
+              تعبئة ديزل
+            </LinkButton>
+          </div>
         </section>
 
         <Card>
-          <CardHeader title="مصاريفي" subtitle="ما دفعته أو أرسلته، آخر 20" />
-          {expenses.length === 0 ? (
-            <EmptyState>لم تسجل أي مصروف بعد.</EmptyState>
+          <CardHeader title="مصاريفي والديزل" subtitle="ما دفعته أو أرسلته" />
+          {items.length === 0 ? (
+            <EmptyState>لم تسجل أي مصروف أو تعبئة بعد.</EmptyState>
           ) : (
             <ul className="divide-y divide-border">
-              {expenses.map((e) => {
-                const st = EXPENSE_STATUS[e.status];
-                const category = e.category as { name_ar: string } | null;
-                const trip = e.trip as { trip_no: number } | null;
-                const editable = e.status === "submitted" && !e.settlement_id;
+              {items.map((it) => {
+                const st = EXPENSE_STATUS[it.status];
                 return (
-                  <li key={e.id} className="flex flex-col gap-1 px-4 py-3 text-sm">
+                  <li key={it.key} className="flex flex-col gap-1 px-4 py-3 text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium">
-                          {category?.name_ar ?? "مصروف"}
-                          {e.receipt_path ? (
-                            <a href={`/files/expense/${e.id}`} target="_blank" rel="noreferrer" className="ms-1 inline-flex align-middle text-muted hover:text-text">
+                          {it.title}
+                          {it.fileHref ? (
+                            <a href={it.fileHref} target="_blank" rel="noreferrer" className="ms-1 inline-flex align-middle text-muted hover:text-text">
                               <Paperclip className="size-3.5" aria-label="مرفق إيصال" />
                             </a>
                           ) : null}
                         </p>
                         <p className="truncate text-xs text-muted">
-                          <span className="num">{formatDate(e.expense_date)}</span>
-                          {trip ? (
+                          <span className="num">{formatDate(it.date)}</span>
+                          {it.tripNo ? (
                             <>
                               {" "}
-                              · رحلة <span className="num">{trip.trip_no}</span>
+                              · رحلة <span className="num">{it.tripNo}</span>
                             </>
                           ) : null}
                           {" · "}
-                          {PAYMENT_METHOD[e.payment_method ?? ""] ?? e.payment_method}
+                          {PAYMENT_METHOD[it.payment ?? ""] ?? it.payment}
                         </p>
-                        {e.description && e.description !== category?.name_ar ? (
-                          <p className="truncate text-xs text-muted">{e.description}</p>
-                        ) : null}
+                        {it.detail ? <p className="truncate text-xs text-muted">{it.detail}</p> : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className="num font-semibold">{formatMoney(e.amount_minor, e.currency)}</span>
+                        <span className="num font-semibold">{formatMoney(it.amount_minor, it.currency)}</span>
                         <Badge tone={st.tone}>{st.label}</Badge>
                       </div>
                     </div>
-                    {e.status === "rejected" && e.rejection_reason ? (
-                      <p className="rounded-md bg-danger-soft px-2 py-1 text-xs text-danger">سبب الرفض: {e.rejection_reason}</p>
+                    {it.status === "rejected" && it.rejection_reason ? (
+                      <p className="rounded-md bg-danger-soft px-2 py-1 text-xs text-danger">سبب الرفض: {it.rejection_reason}</p>
                     ) : null}
-                    {editable ? (
+                    {it.editHref && it.withdraw ? (
                       <div className="flex items-center gap-4">
-                        <Link href={`/my/expense/${e.id}`} className="text-xs text-primary hover:underline">
+                        <Link href={it.editHref} className="text-xs text-primary hover:underline">
                           تعديل
                         </Link>
-                        <WithdrawExpenseButton action={deleteDriverExpense.bind(null, e.id)} />
+                        <WithdrawExpenseButton action={it.withdraw} />
                       </div>
                     ) : null}
                   </li>
@@ -276,33 +345,6 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
           )}
         </Card>
 
-        <Card>
-          <CardHeader title="تعبئة الديزل" subtitle="آخر 10 تعبئات" />
-          {fills.length === 0 ? (
-            <EmptyState>لا توجد تعبئات.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>الوقت</Th>
-                  <Th className="text-end">العداد</Th>
-                  <Th className="text-end">لتر</Th>
-                  <Th>النوع</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {fills.map((f) => (
-                  <Tr key={f.id}>
-                    <Td className="num whitespace-nowrap">{formatDateTime(f.filled_at)}</Td>
-                    <Td className="num text-end">{formatInt(f.odometer)}</Td>
-                    <Td className="num text-end">{formatDecimal(f.liters)}</Td>
-                    <Td>{f.is_full_tank ? "كاملة" : "جزئية"}</Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
       </div>
     </>
   );

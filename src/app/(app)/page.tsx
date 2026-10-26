@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, ClipboardCheck, FileWarning, Wrench } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, FileWarning, Fuel, Wrench } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/date-range";
 import { pnlTotals } from "@/lib/pnl";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatInt } from "@/lib/format";
+import { formatDate, formatDecimal, formatInt } from "@/lib/format";
 import { DOC_TYPE, EXPIRY_BAND, SERVICE_STATUS, TRUCK_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export default async function FleetPage() {
   const month = resolveRange({ range: "month" });
   const supabase = await createClient();
 
-  const [trucksRes, docsRes, servicesRes, pnlRes, pendingRes] = await Promise.all([
+  const [trucksRes, docsRes, servicesRes, pnlRes, pendingRes, pendingFuelRes, fuelAlertsRes] = await Promise.all([
     supabase.from("truck_overview_v").select("*").order("code"),
     supabase
       .from("document_expiry_v")
@@ -38,8 +38,17 @@ export default async function FleetPage() {
     finance
       ? supabase.from("expenses").select("id", { count: "exact", head: true }).eq("status", "submitted")
       : Promise.resolve({ count: 0 }),
+    finance
+      ? supabase.from("fuel_fillups").select("id", { count: "exact", head: true }).eq("status", "submitted")
+      : Promise.resolve({ count: 0 }),
+    supabase
+      .from("fuel_alerts_v")
+      .select("id, truck_id, truck_code, driver_name, filled_on, km_per_liter, baseline_km_per_liter")
+      .order("filled_on", { ascending: false })
+      .limit(8),
   ]);
-  const pendingApprovals = pendingRes.count ?? 0;
+  const fuelAlerts = fuelAlertsRes.data ?? [];
+  const pendingApprovals = (pendingRes.count ?? 0) + (pendingFuelRes.count ?? 0);
 
   const trucks = trucksRes.data ?? [];
   const docs = docsRes.data ?? [];
@@ -62,7 +71,7 @@ export default async function FleetPage() {
         >
           <span className="flex items-center gap-2">
             <ClipboardCheck className="size-4" aria-hidden />
-            بانتظار الموافقة: <span className="num font-bold">{formatInt(pendingApprovals)}</span> مصروف من السائقين
+            بانتظار الموافقة: <span className="num font-bold">{formatInt(pendingApprovals)}</span> مصروف وتعبئة من السائقين
           </span>
           <span className="font-semibold">مراجعة</span>
         </Link>
@@ -74,9 +83,9 @@ export default async function FleetPage() {
         <Stat label="في الورشة" value={formatInt(count("workshop"))} tone={count("workshop") ? "warning" : "neutral"} />
         <Stat
           label="تنبيهات"
-          value={formatInt(docs.length + services.length)}
-          hint="وثائق وصيانة"
-          tone={docs.length + services.length ? "danger" : "success"}
+          value={formatInt(docs.length + services.length + fuelAlerts.length)}
+          hint="وثائق وصيانة وديزل"
+          tone={docs.length + services.length + fuelAlerts.length ? "danger" : "success"}
         />
         {finance ? (
           <>
@@ -147,6 +156,45 @@ export default async function FleetPage() {
         </section>
 
         <aside className="flex flex-col gap-6">
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <Fuel className="size-4 text-danger" aria-hidden />
+                  استهلاك ديزل غير طبيعي
+                </span>
+              }
+              subtitle="آخر 60 يوماً"
+              action={
+                <Link href="/diesel?abnormal=1" className="text-xs text-primary hover:underline">
+                  الكل
+                </Link>
+              }
+            />
+            {fuelAlerts.length === 0 ? (
+              <EmptyState>لا يوجد استهلاك غير طبيعي.</EmptyState>
+            ) : (
+              <ul className="divide-y divide-border">
+                {fuelAlerts.map((a) => (
+                  <li key={a.id}>
+                    <Link
+                      href={`/trucks/${a.truck_id}/diesel`}
+                      className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="num font-semibold">{a.truck_code}</span> <span>{a.driver_name ?? ""}</span>
+                        <span className="block text-xs text-muted">{formatDate(a.filled_on)}</span>
+                      </span>
+                      <span className="num text-xs whitespace-nowrap text-danger">
+                        {formatDecimal(a.km_per_liter)} / {formatDecimal(a.baseline_km_per_liter)} كم/لتر
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
           <Card>
             <CardHeader
               title={

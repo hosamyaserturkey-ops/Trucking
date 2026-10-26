@@ -64,7 +64,7 @@ async function loadRecord(purpose: UploadPurpose, id: string): Promise<RecordSta
     return data;
   }
   if (purpose === "fuel_receipt") {
-    const { data } = await supabase.from("fuel_fillups").select("driver_id").eq("id", id).maybeSingle();
+    const { data } = await supabase.from("fuel_fillups").select("driver_id, reviewed_at, settlement_id").eq("id", id).maybeSingle();
     return data;
   }
   const { data } = await supabase.from("truck_documents").select("id").eq("id", id).maybeSingle();

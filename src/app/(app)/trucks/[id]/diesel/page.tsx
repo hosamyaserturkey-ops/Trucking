@@ -1,22 +1,23 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { STAFF_ROLES } from "@/lib/roles";
+import { FUEL_WRITERS, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { truckPage, type TruckPageProps } from "@/lib/truck";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDateTime, formatDecimal, formatInt } from "@/lib/format";
-import { PAYMENT_METHOD } from "@/lib/labels";
+import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 
 export default async function TruckDieselPage(props: TruckPageProps) {
-  await requireRole(...STAFF_ROLES);
+  const profile = await requireRole(...STAFF_ROLES);
   const { id, truck, range } = await truckPage(props);
   const supabase = await createClient();
 
-  const [fuelRes, stationsRes, settingsRes] = await Promise.all([
+  const [fuelRes, stationsRes, settingsRes, otherRes] = await Promise.all([
     supabase
       .from("fuel_efficiency_v")
       .select("*")
@@ -26,7 +27,16 @@ export default async function TruckDieselPage(props: TruckPageProps) {
       .order("filled_at", { ascending: false }),
     supabase.from("suppliers").select("id, name").eq("kind", "fuel_station"),
     supabase.from("company_settings").select("fuel_anomaly_threshold_pct").maybeSingle(),
+    // Fill-ups still waiting or rejected do not count yet; list them separately.
+    supabase
+      .from("fuel_fillups")
+      .select("id, filled_at, odometer, liters, currency, amount_minor, status, rejection_reason, driver:drivers(full_name)")
+      .eq("truck_id", id)
+      .neq("status", "approved")
+      .order("filled_at", { ascending: false })
+      .limit(20),
   ]);
+  const others = otherRes.data ?? [];
   const rows = fuelRes.data ?? [];
   const stations = new Map((stationsRes.data ?? []).map((s) => [s.id, s.name]));
   const threshold = settingsRes.data?.fuel_anomaly_threshold_pct ?? 15;
@@ -58,10 +68,54 @@ export default async function TruckDieselPage(props: TruckPageProps) {
         />
       </StatGrid>
 
+      {others.length ? (
+        <Card>
+          <CardHeader title="تعبئات لم تُحتسب" subtitle="بانتظار الموافقة أو مرفوضة؛ لا تدخل في كم/لتر ولا في التكاليف" />
+          <Table>
+            <thead>
+              <tr>
+                <Th>الوقت</Th>
+                <Th>السائق</Th>
+                <Th className="text-end">العداد</Th>
+                <Th className="text-end">لتر</Th>
+                <Th className="text-end">المبلغ</Th>
+                <Th>الحالة</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {others.map((f) => {
+                const st = EXPENSE_STATUS[f.status];
+                return (
+                  <Tr key={f.id}>
+                    <Td className="num whitespace-nowrap">{formatDateTime(f.filled_at)}</Td>
+                    <Td className="whitespace-nowrap">{(f.driver as { full_name: string } | null)?.full_name ?? "—"}</Td>
+                    <Td className="num text-end">{formatInt(f.odometer)}</Td>
+                    <Td className="num text-end">{formatDecimal(Number(f.liters))}</Td>
+                    <Td className="num text-end whitespace-nowrap">{formatMoney(f.amount_minor, f.currency)}</Td>
+                    <Td>
+                      <Badge tone={st.tone}>{st.label}</Badge>
+                      {f.rejection_reason ? <span className="block text-xs text-muted">{f.rejection_reason}</span> : null}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader
           title="سجل التعبئة"
           subtitle="يُحسب كم/لتر بين تعبئتين كاملتين، ويشمل كل اللترات المعبأة بينهما"
+          action={
+            FUEL_WRITERS.includes(profile.role) ? (
+              <LinkButton href={`/diesel/new?truck=${id}`} variant="secondary">
+                <Plus className="size-4" aria-hidden />
+                تعبئة
+              </LinkButton>
+            ) : null
+          }
         />
         {rows.length === 0 ? (
           <EmptyState>لا توجد تعبئات في هذه الفترة.</EmptyState>

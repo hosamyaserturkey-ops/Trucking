@@ -13,8 +13,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const counts: Record<string, number> = {};
   if (canSeeFinancials(profile.role)) {
     const supabase = await createClient();
-    const { count } = await supabase.from("expenses").select("id", { count: "exact", head: true }).eq("status", "submitted");
-    counts["/approvals"] = count ?? 0;
+    const [expenses, fills] = await Promise.all([
+      supabase.from("expenses").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+      supabase.from("fuel_fillups").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+    ]);
+    counts["/approvals"] = (expenses.count ?? 0) + (fills.count ?? 0);
   }
 
   const account = (

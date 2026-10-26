@@ -55,7 +55,7 @@ export default async function AdvancesPage() {
                 <tr>
                   <Th>السائق</Th>
                   <Th className="text-end">عهد مفتوحة</Th>
-                  <Th className="text-end">مصاريف معتمدة</Th>
+                  <Th className="text-end">مصاريف وديزل</Th>
                   <Th className="text-end">الرصيد</Th>
                   <Th>بانتظار الموافقة</Th>
                   <Th>آخر تسوية</Th>

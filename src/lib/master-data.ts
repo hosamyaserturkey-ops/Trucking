@@ -20,7 +20,7 @@ export type FieldDef = {
 
 export type RefTable = "trucks" | "accounts" | "drivers";
 
-export type EntityKey = "trucks" | "drivers" | "clients" | "suppliers" | "locations" | "accounts";
+export type EntityKey = "trucks" | "drivers" | "clients" | "suppliers" | "locations" | "accounts" | "expense_categories";
 
 export type EntityDef = {
   key: EntityKey | "truck_assets";
@@ -177,6 +177,31 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
       { name: "type", label: "النوع", type: "select", required: true, options: toOptions(ACCOUNT_TYPE) },
       { name: "parent_id", label: "الحساب الرئيسي", type: "ref", ref: { table: "accounts", label: "code", orderBy: "code" } },
       { name: "is_postable", label: "يقبل الترحيل", type: "bool", hint: "الحسابات الرئيسية لا تقبل قيوداً مباشرة" },
+      ACTIVE,
+    ],
+  },
+  expense_categories: {
+    key: "expense_categories",
+    table: "expense_categories",
+    pk: "id",
+    title: "أنواع المصاريف",
+    singular: "نوع مصروف",
+    readRoles: STAFF,
+    writeRoles: FINANCE,
+    orderBy: "sort_order",
+    list: ["name_ar", "code", "account_id", "sort_order", "is_active"],
+    fields: [
+      { name: "name_ar", label: "الاسم", type: "text", required: true },
+      { name: "code", label: "الرمز", type: "text", required: true, ltr: true, hint: "رمز ثابت بالإنجليزية، مثل tires" },
+      {
+        name: "account_id",
+        label: "حساب المصروف",
+        type: "ref",
+        required: true,
+        ref: { table: "accounts", label: "code", orderBy: "code" },
+        hint: "الحساب الذي يُرحّل إليه هذا النوع لاحقاً",
+      },
+      { name: "sort_order", label: "الترتيب", type: "int" },
       ACTIVE,
     ],
   },

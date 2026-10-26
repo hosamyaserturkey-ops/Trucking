@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatDateTime, formatInt } from "@/lib/format";
+import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
 
 export const metadata: Metadata = { title: "سند تسوية عهدة" };
@@ -20,10 +20,10 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
   if (!UUID.test(id)) notFound();
   const supabase = await createClient();
 
-  const [settlementRes, settingsRes, advancesRes, expensesRes] = await Promise.all([
+  const [settlementRes, settingsRes, advancesRes, expensesRes, fuelRes] = await Promise.all([
     supabase
       .from("driver_settlements")
-      .select("id, settlement_no, settled_on, advances_base_minor, expenses_base_minor, difference_base_minor, advances_count, expenses_count, notes, created_at, driver:drivers(full_name, national_id, phone)")
+      .select("id, settlement_no, settled_on, advances_base_minor, expenses_base_minor, fuel_base_minor, difference_base_minor, advances_count, expenses_count, fuel_count, notes, created_at, driver:drivers(full_name, national_id, phone)")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("company_settings").select("company_name").maybeSingle(),
@@ -37,12 +37,20 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
       .select("id, expense_date, currency, amount_minor, fx_rate, amount_base_minor, description, category:expense_categories(name_ar), trip:trips(trip_no), truck:trucks(code)")
       .eq("settlement_id", id)
       .order("expense_date"),
+    supabase
+      .from("fuel_fillups")
+      .select("id, filled_at, liters, odometer, currency, amount_minor, amount_base_minor, trip:trips(trip_no), truck:trucks(code)")
+      .eq("settlement_id", id)
+      .order("filled_at"),
   ]);
   const s = settlementRes.data;
   if (!s) notFound();
   const driver = s.driver as { full_name: string; national_id: string | null; phone: string | null } | null;
   const advances = advancesRes.data ?? [];
   const expenses = expensesRes.data ?? [];
+  const fills = fuelRes.data ?? [];
+  // expenses_base_minor covers everything the driver paid; diesel is shown on its own.
+  const expensesOnly = s.expenses_base_minor - s.fuel_base_minor;
   const diff = s.difference_base_minor;
   const jod = (minor: number) => formatMoney(minor, "JOD", { withCurrency: false });
   const original = (minor: number, currency: string) => (currency === "JOD" ? "—" : formatMoney(minor, currency));
@@ -157,7 +165,52 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
                 <td className={CELL} colSpan={4}>
                   مجموع المصاريف
                 </td>
-                <td className={`num ${CELL} text-end`}>{jod(s.expenses_base_minor)}</td>
+                <td className={`num ${CELL} text-end`}>{jod(expensesOnly)}</td>
+              </tr>
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="mt-5">
+        <h2 className="mb-2 font-bold">ديزل دفعه السائق واعتُمد ({formatInt(fills.length)})</h2>
+        {fills.length === 0 ? (
+          <p className="text-muted">لا يوجد.</p>
+        ) : (
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr className="bg-surface-2">
+                <th className={`${CELL} text-start`}>الوقت</th>
+                <th className={`${CELL} text-start`}>اللترات والعداد</th>
+                <th className={`${CELL} text-start`}>الشاحنة / الرحلة</th>
+                <th className={`${CELL} text-end`}>بالعملة الأصلية</th>
+                <th className={`${CELL} text-end`}>بالدينار</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fills.map((f) => {
+                const trip = (f.trip as { trip_no: number } | null)?.trip_no;
+                const truck = (f.truck as { code: string } | null)?.code;
+                return (
+                  <tr key={f.id}>
+                    <td className={`num ${CELL} whitespace-nowrap`}>{formatDateTime(f.filled_at)}</td>
+                    <td className={CELL}>
+                      <span className="num">{formatDecimal(Number(f.liters))}</span> لتر · العداد <span className="num">{formatInt(f.odometer)}</span>
+                    </td>
+                    <td className={`num ${CELL} whitespace-nowrap`}>
+                      {truck ?? "—"}
+                      {trip ? ` / ${trip}` : ""}
+                    </td>
+                    <td className={`num ${CELL} text-end`}>{original(f.amount_minor, f.currency)}</td>
+                    <td className={`num ${CELL} text-end`}>{jod(f.amount_base_minor)}</td>
+                  </tr>
+                );
+              })}
+              <tr className="font-bold">
+                <td className={CELL} colSpan={4}>
+                  مجموع الديزل
+                </td>
+                <td className={`num ${CELL} text-end`}>{jod(s.fuel_base_minor)}</td>
               </tr>
             </tbody>
           </table>
@@ -173,7 +226,11 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
             </tr>
             <tr>
               <td className={`${CELL} py-1.5`}>ناقص: المصاريف المعتمدة</td>
-              <td className={`num ${CELL} py-1.5 text-end`}>({jod(s.expenses_base_minor)})</td>
+              <td className={`num ${CELL} py-1.5 text-end`}>({jod(expensesOnly)})</td>
+            </tr>
+            <tr>
+              <td className={`${CELL} py-1.5`}>ناقص: الديزل المعتمد</td>
+              <td className={`num ${CELL} py-1.5 text-end`}>({jod(s.fuel_base_minor)})</td>
             </tr>
             <tr className="bg-surface-2 font-bold">
               <td className={`${CELL} py-1.5`}>

@@ -9,6 +9,7 @@ import { parseOdometer } from "@/lib/trip-parse";
 import { DRIVER_CATEGORY_CODES, parseDriverExpense } from "@/lib/driver-expense";
 import { describeDbError } from "@/lib/master-data-parse";
 import { afterFileSaved, attachFile, removeFile } from "@/lib/file-access";
+import { parseFillup } from "@/lib/fuel";
 
 export type DriverFormState = { error: string | null };
 
@@ -128,6 +129,98 @@ export async function deleteDriverExpense(id: string): Promise<DriverFormState> 
   if (error) return { error: dbMessage(error) };
   if (!data?.length) return { error: "لا يمكن حذف هذا المصروف" };
   await removeFile("expense_receipt", data[0].receipt_path);
+  revalidatePath("/my");
+  return { error: null };
+}
+
+/** Send (id null) or correct a diesel fill-up the driver paid from the advance. It waits for approval. */
+export async function saveDriverFillup(id: string | null, _prev: DriverFormState, formData: FormData): Promise<DriverFormState> {
+  const profile = await requireRole("driver");
+  if (!profile.driver_id) return { error: "حسابك غير مرتبط بسجل سائق" };
+  // A new fill-up needs its receipt; when correcting one, the stored photo stays unless replaced.
+  const parsed = parseFillup(fromForm(formData), { mode: "driver", userId: profile.user_id, requireReceipt: !id });
+  if (!parsed.ok) return { error: parsed.error };
+  const v = parsed.values;
+  const supabase = await createClient();
+
+  // The truck comes from the trip, else the driver's own truck.
+  let truck_id: string | null = null;
+  if (v.trip_id) {
+    const { data: trip } = await supabase.from("trips").select("truck_id").eq("id", v.trip_id).maybeSingle();
+    if (!trip) return { error: "الرحلة غير موجودة" };
+    truck_id = trip.truck_id;
+  } else {
+    const { data: driver } = await supabase.from("drivers").select("default_truck_id").maybeSingle();
+    truck_id = driver?.default_truck_id ?? null;
+  }
+  if (!truck_id) return { error: "اختر الرحلة؛ لا توجد شاحنة مرتبطة بك" };
+
+  let fx_rate = v.fx_rate;
+  if (fx_rate === null) {
+    const { data: cur } = await supabase.from("currencies").select("rate_to_base").eq("code", v.currency).maybeSingle();
+    fx_rate = Number(cur?.rate_to_base ?? 0);
+    if (!fx_rate) return { error: "لا يوجد سعر صرف لهذه العملة؛ تواصل مع المحاسب" };
+  }
+
+  const row = {
+    truck_id,
+    driver_id: profile.driver_id,
+    trip_id: v.trip_id,
+    station_id: v.station_id,
+    filled_at: v.filled_at,
+    odometer: v.odometer,
+    liters: v.liters,
+    is_full_tank: v.is_full_tank,
+    currency: v.currency,
+    amount_minor: v.amount_minor,
+    fx_rate,
+    payment_method: "driver_advance",
+    status: "submitted",
+    notes: v.notes,
+  };
+
+  let receipt_path: string | null = null;
+  if (v.receipt_upload) {
+    const attached = await attachFile("fuel_receipt", profile.user_id, v.receipt_upload);
+    if (!attached.ok) return { error: attached.error };
+    receipt_path = attached.path;
+  }
+
+  if (id) {
+    const { data: old } = await supabase.from("fuel_fillups").select("receipt_path").eq("id", id).maybeSingle();
+    const update = receipt_path ? { ...row, receipt_path } : row;
+    const { data, error } = await supabase.from("fuel_fillups").update(update).eq("id", id).eq("status", "submitted").select("id");
+    if (error || !data?.length) {
+      await removeFile("fuel_receipt", receipt_path);
+      return { error: error ? dbMessage(error) : "لا يمكن تعديل هذه التعبئة (ربما تمت مراجعتها)" };
+    }
+    await afterFileSaved("fuel_receipt", v.receipt_upload, receipt_path ? old?.receipt_path : null);
+  } else {
+    const { error } = await supabase.from("fuel_fillups").insert({ ...row, receipt_path });
+    if (error) {
+      await removeFile("fuel_receipt", receipt_path);
+      return { error: dbMessage(error) };
+    }
+    await afterFileSaved("fuel_receipt", v.receipt_upload, null);
+  }
+
+  revalidatePath("/my");
+  redirect("/my?saved=fuel");
+}
+
+/** Withdraw a fill-up that has not been reviewed yet; its receipt photo is deleted. */
+export async function deleteDriverFillup(id: string): Promise<DriverFormState> {
+  await requireRole("driver");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fuel_fillups")
+    .delete()
+    .eq("id", id)
+    .eq("status", "submitted")
+    .select("id, receipt_path");
+  if (error) return { error: dbMessage(error) };
+  if (!data?.length) return { error: "لا يمكن حذف هذه التعبئة" };
+  await removeFile("fuel_receipt", data[0].receipt_path);
   revalidatePath("/my");
   return { error: null };
 }

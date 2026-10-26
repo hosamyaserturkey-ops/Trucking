@@ -6,9 +6,11 @@ import {
   BookOpen,
   Building2,
   CircleCheck,
+  Fuel,
   History,
   List,
   MapPin,
+  Receipt,
   Route,
   ShieldCheck,
   Store,
@@ -32,6 +34,8 @@ const ICONS: Record<string, LucideIcon> = {
   history: History,
   check: CircleCheck,
   wallet: Wallet,
+  fuel: Fuel,
+  receipt: Receipt,
 };
 
 function isActive(pathname: string, href: string) {

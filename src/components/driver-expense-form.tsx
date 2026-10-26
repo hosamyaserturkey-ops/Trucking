@@ -1,11 +1,9 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
-import { Camera, X } from "lucide-react";
 import type { DriverFormState } from "@/app/(app)/my/actions";
-import { uploadFile } from "@/lib/upload-client";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
 
 type Option = { id: string; label: string };
 
@@ -31,32 +29,7 @@ type Props = {
 
 /** Phone-first expense form. The photo is shrunk and uploaded before the form is saved. */
 export function DriverExpenseForm({ recordId, trips, categories, today, initial = {}, action, submitLabel }: Props) {
-  const [state, formAction, pending] = useActionState(action, { error: null });
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const busy = pending || uploading;
-
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setUploadError(null);
-    const formData = new FormData(event.currentTarget);
-    formData.delete("photo");
-    const file = fileRef.current?.files?.[0];
-    if (file) {
-      // Straight from the phone to storage, through a short-lived link the server signs.
-      setUploading(true);
-      const uploaded = await uploadFile(file, "expense_receipt", recordId);
-      setUploading(false);
-      if (!uploaded.ok) {
-        setUploadError(uploaded.error);
-        return;
-      }
-      formData.set("receipt_upload", uploaded.key);
-    }
-    startTransition(() => formAction(formData));
-  }
+  const { busy, uploading, pending, error, onSubmit } = useReceiptAction(action, "expense_receipt", recordId);
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -119,44 +92,9 @@ export function DriverExpenseForm({ recordId, trips, categories, today, initial 
           <Input id="description" name="description" defaultValue={initial.description ?? ""} placeholder="مثال: أجور تنزيل في المستودع" />
         </Field>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">صورة الإيصال</span>
-          {preview ? (
-            <div className="relative w-fit">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local preview of the chosen file */}
-              <img src={preview} alt="معاينة الإيصال" className="max-h-56 rounded-lg border border-border" />
-              <button
-                type="button"
-                onClick={() => {
-                  setPreview(null);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-                className="absolute end-1 top-1 rounded-full bg-surface p-1 shadow"
-                aria-label="إزالة الصورة"
-              >
-                <X className="size-4" aria-hidden />
-              </button>
-            </div>
-          ) : null}
-          <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted hover:bg-surface-2">
-            <Camera className="size-5" aria-hidden />
-            {preview ? "تغيير الصورة" : initial.hasReceipt ? "استبدال الصورة المرفقة" : "تصوير الإيصال"}
-            <input
-              ref={fileRef}
-              name="photo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                setPreview(f ? URL.createObjectURL(f) : null);
-              }}
-            />
-          </label>
-        </div>
+        <ReceiptInput hasExisting={initial.hasReceipt} />
       </fieldset>
-      <FormError message={uploadError ?? state.error} />
+      <FormError message={error} />
       <Button type="submit" disabled={busy} className="w-full py-3 text-base">
         {uploading ? "جارٍ رفع الصورة…" : pending ? "جارٍ الحفظ…" : submitLabel}
       </Button>

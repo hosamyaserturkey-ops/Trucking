@@ -206,6 +206,24 @@ select pg_temp.check(pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000d
   format('delete from public.fuel_fillups where id = %L', (select id from mine))),
   'a settled fill-up cannot be deleted');
 
+-- Reviewed rows are kept (migration 13) -----------------------------------------
+select pg_temp.check(pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000d1',
+  'delete from public.fuel_fillups where notes = ''phase3 dispatcher'''),
+  'a rejected (reviewed) fill-up cannot be deleted, even by the manager');
+create temp table reviewed_exp as
+select id from public.expenses where status = 'submitted' and settlement_id is null limit 1;
+grant select on reviewed_exp to authenticated;
+select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000d2',
+  'update public.expenses set status = ''approved'' where id = (select id from reviewed_exp)'),
+  'accountant approves a driver expense');
+select pg_temp.check(pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000d2',
+  'delete from public.expenses where id = (select id from reviewed_exp)')
+  and exists (select 1 from public.expenses where id = (select id from reviewed_exp)),
+  'a reviewed expense cannot be deleted');
+select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000d2',
+  'delete from public.expenses where id = (select id from public.expenses where reviewed_at is null and settlement_id is null and status = ''approved'' and driver_id is null limit 1)'),
+  'an office expense that was never reviewed can still be deleted');
+
 -- Alerts --------------------------------------------------------------------------
 select pg_temp.check(not exists (select 1 from public.fuel_alerts_v where km_per_liter >= baseline_km_per_liter
   or filled_on < current_date - 60),

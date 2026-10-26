@@ -33,3 +33,31 @@ export async function loadDriverExpenseOptions(): Promise<{ trips: DriverOption[
     categories: (catsRes.data ?? []).map((c) => ({ id: c.id, label: c.name_ar })),
   };
 }
+
+export type DriverFuelOptions = {
+  trips: DriverOption[];
+  stations: DriverOption[];
+  /** The driver's own truck, used when a fill-up is not tied to a trip. */
+  truck: { id: string; code: string; lastOdometer: number | null; tankLiters: number | null } | null;
+};
+
+/** Trips, fuel stations and the driver's truck for the diesel form. */
+export async function loadDriverFuelOptions(): Promise<DriverFuelOptions> {
+  const supabase = await createClient();
+  const [{ trips }, stationsRes, driverRes] = await Promise.all([
+    loadDriverExpenseOptions(),
+    supabase.from("suppliers").select("id, name").eq("kind", "fuel_station").eq("is_active", true).order("name"),
+    supabase.from("drivers").select("default_truck_id, truck:trucks!drivers_default_truck_id_fkey(id, code, fuel_tank_liters)").maybeSingle(),
+  ]);
+  const t = driverRes.data?.truck as { id: string; code: string; fuel_tank_liters: number | null } | null | undefined;
+  let lastOdometer: number | null = null;
+  if (t) {
+    const { data } = await supabase.from("truck_overview_v").select("odometer").eq("truck_id", t.id).maybeSingle();
+    lastOdometer = data?.odometer ?? null;
+  }
+  return {
+    trips,
+    stations: (stationsRes.data ?? []).map((s) => ({ id: s.id, label: s.name })),
+    truck: t ? { id: t.id, code: t.code, lastOdometer, tankLiters: t.fuel_tank_liters } : null,
+  };
+}

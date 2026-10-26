@@ -35,13 +35,37 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - Settle up to a date with a live preview. A settlement locks its rows for good.
   - An A4 settlement slip with signature lines.
 
+## What's in Phase 3
+
+- **Diesel from the driver's phone (تعبئة ديزل):**
+  - The driver records odometer, liters, full tank or not, amount and station, with a **required receipt photo**. The price per liter shows as they type.
+  - The fill-up waits for approval and is paid from the driver's advance (عهدة).
+  - It can be fixed or withdrawn until reviewed. **مصاريفي والديزل** lists both kinds with their status.
+- **Approvals:**
+  - A diesel section shows the receipt, odometer, liters and price per liter.
+  - It also shows **the km/L this fill-up implies against the truck's normal**, and flags it when it is far off.
+  - The accountant can correct liters, amount, odometer or full tank before approving, or reject with a reason.
+- **Advances:** approved driver-paid diesel appears in the driver's ledger, the settlement preview and the A4 slip, and is settled with the expenses.
+- **Diesel log (الديزل):**
+  - Every fill-up with filters for date, truck, driver, status and abnormal only.
+  - Totals for liters, cost, km/L and price per liter, and trucks and drivers ranked by km/L.
+  - Office entry and editing. A dispatcher's entry goes to approval; the manager's or accountant's counts at once.
+- **Expenses (المصاريف):**
+  - The office enters an expense for one truck (optionally a trip and driver) or as overhead shared across the fleet, with category, supplier, currency, payment, reference and an optional receipt.
+  - It can be edited or deleted until it is settled. Dispatchers can view the list but not enter expenses.
+  - Expense categories are under master data (**أنواع المصاريف**).
+- **Fuel alerts:** abnormal approved fill-ups from the last 60 days show on the fleet board. The Truck 360 Diesel tab lists fill-ups not counted yet.
+- All receipts go through the R2 storage module. Diesel receipts open at `/files/fuel/<id>`.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
 - **Posted journal entries can't be edited or deleted.** Corrections go through `reverse_journal_entry()`.
 - **Money is stored as integer minor units** (JOD fils, USD cents) with the exchange rate. The JOD amount is fixed when the row is written.
 - **Drivers see only their own rows** (RLS). Dispatchers can't see the journal, purchase values or financing.
-- **Driver expenses count only once approved**, and only the accountant or manager can approve. Settled advances and expenses can't be changed, and settlements can't be edited or deleted.
+- **Driver expenses and fill-ups count only once approved**, and only the accountant or manager can approve. Settled advances, expenses and fill-ups can't be changed, and settlements can't be edited or deleted.
+- **A reviewed expense or fill-up can't be deleted**, and neither can its receipt. A wrong one is corrected or reversed with a new row.
+- **Fill-ups must be plausible:** liters no more than the truck's tank, and the odometer between the truck's earlier and later fill-ups.
 
 ## Running it
 
@@ -54,14 +78,21 @@ pnpm dev                     # http://localhost:3000
 Checks:
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test   # unit tests (money, dates, P&L, forms, advances, storage rules)
+pnpm lint && pnpm typecheck && pnpm test   # unit tests (money, dates, P&L, forms, advances, diesel, storage rules)
 pnpm test:storage                          # live storage checks; needs the R2_* variables (R2 or a local MinIO)
 PGHOST=/tmp PGPORT=54329 PGUSER=postgres pnpm db:test   # migrations + seed + SQL rule tests on a local Postgres
 pnpm build && pnpm start &
 E2E_MANAGER_EMAIL=… E2E_MANAGER_PASSWORD=… E2E_DRIVER_EMAIL=… E2E_DRIVER_PASSWORD=… BASE_URL=http://localhost:3000 pnpm e2e
 ```
 
-Add `E2E_ACCOUNTANT_EMAIL/PASSWORD` and `E2E_DISPATCHER_EMAIL/PASSWORD` to also run the full Phase 2 flow (plan a trip → driver runs it and sends expenses → approve/reject → advance → settlement slip → empty return leg). That flow writes rows and uploads a receipt, so run it against demo data only. `E2E_STORAGE_ORIGIN` checks that receipts are served from the right place.
+Add `E2E_ACCOUNTANT_EMAIL/PASSWORD` and `E2E_DISPATCHER_EMAIL/PASSWORD` to also run the full flow. It covers:
+- planning a trip, then the driver running it and sending expenses and a diesel fill-up with a receipt;
+- approve and reject, with the fill-up's implied km/L;
+- advance, settlement slip with diesel, and an empty return leg;
+- office overhead and truck expenses, and the diesel log;
+- what a driver and a dispatcher must not reach.
+
+That flow writes rows and uploads receipts, so run it against demo data only. `E2E_STORAGE_ORIGIN` checks that receipts are served from the right place.
 
 ## File storage (Cloudflare R2)
 
@@ -74,7 +105,7 @@ Receipt photos and document scans live in one **private** R2 bucket; Supabase ho
 - **On save:**
   - The server checks that the file exists in the user's own folder with an allowed type and size, and moves it from `tmp/` into place.
   - A replaced or withdrawn receipt is deleted.
-  - The database refuses another driver's folder, and freezes a receipt once its expense is reviewed or settled (migration 11).
+  - The database refuses another driver's folder, and freezes a receipt once its expense or fill-up is reviewed or settled (migrations 11 and 13).
 - **Viewing:** pages link to `/files/<kind>/<id>`. The row is read with the user's own session, so RLS decides who sees it, and the redirect is to a link that expires after 10 minutes. A driver never gets a link to another driver's file.
 - **Clean-up:** uploads never attached to a saved row stay under `tmp/`, and the bucket's lifecycle rule deletes them after a day.
 
@@ -131,7 +162,12 @@ The old Supabase buckets (`receipts`, `truck-documents`) and their policies are 
   9. P&L summary functions
   10. trips, driver advances, expense approval and settlements
   11. file rules: path layout, a driver's own folder, receipts frozen once reviewed or settled
-- **Demo data:** `supabase/seed.sql` (15 trucks, about 6 months, all names fictional), then `supabase/seed_phase2.sql` (advances, past settlements, expenses waiting for approval).
+  12. diesel approval and settlement, `driver_advance` payment, plausibility checks, fuel alerts
+  13. reviewed expenses and fill-ups can't be deleted
+- **Demo data:** run these in order:
+  1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
+  2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
+  3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal.
 - **Before go-live:**
   - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings.
   - Run `truncate audit.log;`.
@@ -146,7 +182,6 @@ The old Supabase buckets (`receipts`, `truck-documents`) and their policies are 
 
 ## Next phases
 
-- **3:** diesel fill-up entry with receipts and tank stock.
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
 - **5:** invoicing, checks, JoFotara.
 - **6:** auto-posted journal entries, period closing.
