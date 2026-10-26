@@ -2,7 +2,7 @@
 
 Arabic (RTL) accounting and fleet system for a trucking company. It is built around **Truck 360 (ملف الشاحنة)**: pick a truck and see everything about it for any date range.
 
-**Stack:** Next.js 15, Supabase (Postgres, Auth, row-level security), Cloudflare R2 for files, Tailwind CSS v4.
+**Stack:** Next.js 15, Supabase (Postgres, Auth, row-level security), Cloudflare R2 for files, Tailwind CSS v4. Hosted on Cloudflare Workers through the OpenNext adapter.
 
 ## What's in Phase 1
 
@@ -112,7 +112,7 @@ Receipt photos and document scans live in one **private** R2 bucket; Supabase ho
 ### Setting up R2 (Cloudflare dashboard)
 1. **R2 Object Storage** → enable R2. Cloudflare asks for a payment method even for the free 10 GB.
 2. **Create bucket:** name `trucking-files`, location Automatic, Standard class. Keep public access **off** (no r2.dev subdomain, no custom domain).
-3. Bucket → **Settings** → **CORS policy** → **Add**, and paste (put your real domain in place of `YOUR-DOMAIN` when you have one):
+3. Bucket → **Settings** → **CORS policy** → **Add**, and paste. Put the app's address in place of `YOUR-DOMAIN`, e.g. `trucking.<your-subdomain>.workers.dev` (see Hosting):
    ```json
    [
      {
@@ -147,6 +147,35 @@ The old Supabase buckets (`receipts`, `truck-documents`) and their policies are 
 - Any S3-compatible server works. For MinIO:
   - set `R2_ENDPOINT=http://127.0.0.1:9000` and the MinIO user and password as the R2 keys;
   - `pnpm test:storage` creates the bucket there and checks uploads, type/size locks, expiry and folder ownership.
+
+## Hosting (Cloudflare Workers)
+
+The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennextjs/cloudflare`; the settings are in `wrangler.jsonc` and `open-next.config.ts`. The build is 1.7 MB compressed, within the free plan's 3 MB limit.
+
+**One-time setup in the Cloudflare dashboard:** go to **Workers & Pages** → **trucking** → **Settings**.
+1. **Build** → **Build configuration**:
+   - Build command: `npx opennextjs-cloudflare build`
+   - Deploy command: `npx opennextjs-cloudflare deploy`
+   - Non-production branch deploy command: `npx opennextjs-cloudflare upload`
+   - Root directory: leave it as `/`.
+2. **Build** → **Variables and secrets** (used while building): add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Next.js puts these two public values into the pages at build time.
+3. **Variables and Secrets** (used while running): add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`, each as type **Secret**.
+4. **Domains & Routes:** note the `workers.dev` address and add it to the R2 bucket's CORS rule (step 3 above), so phones can upload receipts from it.
+5. **Retry the latest build**, or push a commit.
+
+**Deploys:**
+- A push to `main` deploys the live app.
+- A push to another branch uploads a preview version, and its link shows on the pull request.
+- Uploads work only from addresses listed in the CORS rule.
+
+**Free plan limits:**
+- A request may use about 10 ms of CPU.
+- If heavy pages start showing "Error 1102 (Worker exceeded resource limits)", move to the Workers Paid plan (about $5 a month).
+
+**Run the Worker locally:**
+- Put the `R2_*` values in `.dev.vars`, which is gitignored and uses the same format as `.env.local`.
+- Then run `pnpm cf:preview`.
+- `pnpm cf:deploy` deploys from your machine after `wrangler login`.
 
 ## Database
 
