@@ -163,18 +163,182 @@ export type Database = {
           code: string
           minor_units: number
           name_ar: string
+          rate_to_base: number | null
         }
         Insert: {
           code: string
           minor_units: number
           name_ar: string
+          rate_to_base?: number | null
         }
         Update: {
           code?: string
           minor_units?: number
           name_ar?: string
+          rate_to_base?: number | null
         }
         Relationships: []
+      }
+      driver_advances: {
+        Row: {
+          amount_base_minor: number
+          amount_minor: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          driver_id: string
+          fx_rate: number
+          id: string
+          issued_on: string
+          method: string
+          notes: string | null
+          settlement_id: string | null
+          trip_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_base_minor?: number
+          amount_minor: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          driver_id: string
+          fx_rate?: number
+          id?: string
+          issued_on: string
+          method?: string
+          notes?: string | null
+          settlement_id?: string | null
+          trip_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_base_minor?: number
+          amount_minor?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          driver_id?: string
+          fx_rate?: number
+          id?: string
+          issued_on?: string
+          method?: string
+          notes?: string | null
+          settlement_id?: string | null
+          trip_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_advances_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "driver_advances_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_advances_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_advances_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "driver_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_advances_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trip_profit_v"
+            referencedColumns: ["trip_id"]
+          },
+          {
+            foreignKeyName: "driver_advances_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_advances_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["current_trip_id"]
+          },
+        ]
+      }
+      driver_settlements: {
+        Row: {
+          advances_base_minor: number
+          advances_count: number
+          created_at: string
+          created_by: string | null
+          difference_base_minor: number
+          driver_id: string
+          expenses_base_minor: number
+          expenses_count: number
+          id: string
+          notes: string | null
+          settled_on: string
+          settlement_no: number
+        }
+        Insert: {
+          advances_base_minor: number
+          advances_count?: number
+          created_at?: string
+          created_by?: string | null
+          difference_base_minor: number
+          driver_id: string
+          expenses_base_minor: number
+          expenses_count?: number
+          id?: string
+          notes?: string | null
+          settled_on: string
+          settlement_no?: never
+        }
+        Update: {
+          advances_base_minor?: number
+          advances_count?: number
+          created_at?: string
+          created_by?: string | null
+          difference_base_minor?: number
+          driver_id?: string
+          expenses_base_minor?: number
+          expenses_count?: number
+          id?: string
+          notes?: string | null
+          settled_on?: string
+          settlement_no?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_settlements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "driver_settlements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       drivers: {
         Row: {
@@ -297,6 +461,12 @@ export type Database = {
           payment_method: string
           receipt_path: string | null
           reference_no: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          settlement_id: string | null
+          status: string
+          submitted_by: string | null
           supplier_id: string | null
           trip_id: string | null
           truck_id: string | null
@@ -318,6 +488,12 @@ export type Database = {
           payment_method?: string
           receipt_path?: string | null
           reference_no?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          settlement_id?: string | null
+          status?: string
+          submitted_by?: string | null
           supplier_id?: string | null
           trip_id?: string | null
           truck_id?: string | null
@@ -339,6 +515,12 @@ export type Database = {
           payment_method?: string
           receipt_path?: string | null
           reference_no?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          settlement_id?: string | null
+          status?: string
+          submitted_by?: string | null
           supplier_id?: string | null
           trip_id?: string | null
           truck_id?: string | null
@@ -363,7 +545,21 @@ export type Database = {
             foreignKeyName: "expenses_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "expenses_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_settlement_fk"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "driver_settlements"
             referencedColumns: ["id"]
           },
           {
@@ -531,6 +727,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
           },
           {
             foreignKeyName: "fuel_fillups_driver_id_fkey"
@@ -770,6 +973,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_driver_fk"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
           {
             foreignKeyName: "profiles_driver_fk"
             columns: ["driver_id"]
@@ -1088,6 +1298,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
           },
           {
             foreignKeyName: "trips_driver_id_fkey"
@@ -1551,6 +1768,20 @@ export type Database = {
           },
         ]
       }
+      driver_advance_balance_v: {
+        Row: {
+          balance_base_minor: number | null
+          driver_id: string | null
+          full_name: string | null
+          is_active: boolean | null
+          last_settled_on: string | null
+          open_advances_base_minor: number | null
+          open_expenses_base_minor: number | null
+          pending_base_minor: number | null
+          pending_count: number | null
+        }
+        Relationships: []
+      }
       fuel_efficiency_v: {
         Row: {
           amount_base_minor: number | null
@@ -1581,6 +1812,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
           },
           {
             foreignKeyName: "fuel_fillups_driver_id_fkey"
@@ -1761,6 +1999,13 @@ export type Database = {
             foreignKeyName: "trips_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
@@ -1814,6 +2059,10 @@ export type Database = {
       }
     }
     Functions: {
+      driver_trip_action: {
+        Args: { p_action: string; p_odometer: number; p_trip_id: string }
+        Returns: string
+      }
       generate_installments: {
         Args: { p_financing_id: string }
         Returns: number
@@ -1821,6 +2070,10 @@ export type Database = {
       post_journal_entry: { Args: { p_entry_id: string }; Returns: undefined }
       reverse_journal_entry: {
         Args: { p_date?: string; p_entry_id: string; p_reason?: string }
+        Returns: string
+      }
+      settle_driver_advance: {
+        Args: { p_driver_id: string; p_notes?: string; p_settled_on?: string }
         Returns: string
       }
       truck_pnl_monthly: {
