@@ -184,7 +184,11 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
                       <div className="min-w-0">
                         <p className="font-medium">
                           {category?.name_ar ?? "مصروف"}
-                          {e.receipt_path ? <Paperclip className="ms-1 inline size-3.5 text-muted" aria-label="مرفق إيصال" /> : null}
+                          {e.receipt_path ? (
+                            <a href={`/files/expense/${e.id}`} target="_blank" rel="noreferrer" className="ms-1 inline-flex align-middle text-muted hover:text-text">
+                              <Paperclip className="size-3.5" aria-label="مرفق إيصال" />
+                            </a>
+                          ) : null}
                         </p>
                         <p className="truncate text-xs text-muted">
                           <span className="num">{formatDate(e.expense_date)}</span>

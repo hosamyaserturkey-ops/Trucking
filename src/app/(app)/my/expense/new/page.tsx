@@ -11,7 +11,7 @@ import { DriverExpenseForm } from "@/components/driver-expense-form";
 export const metadata: Metadata = { title: "مصروف جديد" };
 
 export default async function NewDriverExpensePage({ searchParams }: { searchParams: Promise<{ trip?: string }> }) {
-  const profile = await requireRole("driver");
+  await requireRole("driver");
   const { trip } = await searchParams;
   const { trips, categories } = await loadDriverExpenseOptions();
 
@@ -33,7 +33,6 @@ export default async function NewDriverExpensePage({ searchParams }: { searchPar
         ) : (
           <CardBody>
             <DriverExpenseForm
-              userId={profile.user_id}
               trips={trips}
               categories={categories}
               today={todayIso()}

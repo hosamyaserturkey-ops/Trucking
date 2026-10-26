@@ -8,6 +8,7 @@ import { todayIso } from "@/lib/date-range";
 import { parseOdometer } from "@/lib/trip-parse";
 import { DRIVER_CATEGORY_CODES, parseDriverExpense } from "@/lib/driver-expense";
 import { describeDbError } from "@/lib/master-data-parse";
+import { afterFileSaved, attachFile, removeFile } from "@/lib/file-access";
 
 export type DriverFormState = { error: string | null };
 
@@ -84,14 +85,30 @@ export async function saveDriverExpense(id: string | null, _prev: DriverFormStat
     status: "submitted",
   };
 
+  // A new photo was uploaded straight to storage; check it and move it into place.
+  let receipt_path: string | null = null;
+  if (v.receipt_upload) {
+    const attached = await attachFile("expense_receipt", profile.user_id, v.receipt_upload);
+    if (!attached.ok) return { error: attached.error };
+    receipt_path = attached.path;
+  }
+
   if (id) {
-    const update = v.receipt_path ? { ...row, receipt_path: v.receipt_path } : row;
+    const { data: old } = await supabase.from("expenses").select("receipt_path").eq("id", id).maybeSingle();
+    const update = receipt_path ? { ...row, receipt_path } : row;
     const { data, error } = await supabase.from("expenses").update(update).eq("id", id).eq("status", "submitted").select("id");
-    if (error) return { error: dbMessage(error) };
-    if (!data?.length) return { error: "لا يمكن تعديل هذا المصروف (ربما تمت مراجعته)" };
+    if (error || !data?.length) {
+      await removeFile("expense_receipt", receipt_path);
+      return { error: error ? dbMessage(error) : "لا يمكن تعديل هذا المصروف (ربما تمت مراجعته)" };
+    }
+    await afterFileSaved("expense_receipt", v.receipt_upload, receipt_path ? old?.receipt_path : null);
   } else {
-    const { error } = await supabase.from("expenses").insert({ ...row, receipt_path: v.receipt_path });
-    if (error) return { error: dbMessage(error) };
+    const { error } = await supabase.from("expenses").insert({ ...row, receipt_path });
+    if (error) {
+      await removeFile("expense_receipt", receipt_path);
+      return { error: dbMessage(error) };
+    }
+    await afterFileSaved("expense_receipt", v.receipt_upload, null);
   }
 
   revalidatePath("/my");
@@ -102,9 +119,15 @@ export async function saveDriverExpense(id: string | null, _prev: DriverFormStat
 export async function deleteDriverExpense(id: string): Promise<DriverFormState> {
   await requireRole("driver");
   const supabase = await createClient();
-  const { data, error } = await supabase.from("expenses").delete().eq("id", id).eq("status", "submitted").select("id");
+  const { data, error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", id)
+    .eq("status", "submitted")
+    .select("id, receipt_path");
   if (error) return { error: dbMessage(error) };
   if (!data?.length) return { error: "لا يمكن حذف هذا المصروف" };
+  await removeFile("expense_receipt", data[0].receipt_path);
   revalidatePath("/my");
   return { error: null };
 }

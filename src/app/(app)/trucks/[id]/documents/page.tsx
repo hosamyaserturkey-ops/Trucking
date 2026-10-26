@@ -20,14 +20,6 @@ export default async function TruckDocumentsPage(props: TruckPageProps) {
     .order("expiry_date", { ascending: true, nullsFirst: false });
   const docs = data ?? [];
 
-  // Signed links for scans, valid for 10 minutes. Private bucket; RLS decides who may read.
-  const paths = docs.map((d) => d.file_path).filter((p): p is string => !!p);
-  const signed = new Map<string, string>();
-  if (paths.length) {
-    const { data: urls } = await supabase.storage.from("truck-documents").createSignedUrls(paths, 600);
-    for (const u of urls ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl);
-  }
-
   return (
     <Card>
       <CardHeader
@@ -41,7 +33,8 @@ export default async function TruckDocumentsPage(props: TruckPageProps) {
           {docs.map((d) => {
             const band = EXPIRY_BAND[d.expiry_band ?? "none"];
             const days = d.days_left;
-            const url = d.file_path ? signed.get(d.file_path) : undefined;
+            // Scans open through /files/…: RLS decides, and each view gets a fresh short-lived link.
+            const url = d.file_path && d.id ? `/files/truck-document/${d.id}` : undefined;
             return (
               <li key={d.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
                 <div className="flex items-start justify-between gap-2">

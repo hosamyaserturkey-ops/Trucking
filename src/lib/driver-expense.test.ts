@@ -20,15 +20,23 @@ describe("parseDriverExpense", () => {
         amount_minor: 12_500,
         payment_method: "driver_advance",
         description: null,
-        receipt_path: null,
+        receipt_upload: null,
       },
     });
   });
 
-  it("accepts a receipt only from the driver's own folder", () => {
-    const own = parseDriverExpense(form({ ...base, receipt_path: `${USER}/2026-10/x.jpg` }), opts);
-    expect(own.ok && own.values.receipt_path).toBe(`${USER}/2026-10/x.jpg`);
-    expect(parseDriverExpense(form({ ...base, receipt_path: "someone-else/2026-10/x.jpg" }), opts).ok).toBe(false);
+  it("accepts a receipt upload only from the driver's own upload folder", () => {
+    const key = `tmp/receipts/${USER}/2026-10/x.jpg`;
+    const own = parseDriverExpense(form({ ...base, receipt_upload: key }), opts);
+    expect(own.ok && own.values.receipt_upload).toBe(key);
+    for (const bad of [
+      "tmp/receipts/someone-else/2026-10/x.jpg",
+      `receipts/${USER}/2026-10/x.jpg`,
+      `tmp/truck-documents/${USER}/2026-10/x.jpg`,
+      `tmp/receipts/${USER}/../someone-else/x.jpg`,
+    ]) {
+      expect(parseDriverExpense(form({ ...base, receipt_upload: bad }), opts).ok, bad).toBe(false);
+    }
   });
 
   it("parses USD in cents", () => {

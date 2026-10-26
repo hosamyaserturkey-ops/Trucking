@@ -22,10 +22,3 @@ export async function compressImage(file: File, maxSide = 1600, quality = 0.8): 
     return file;
   }
 }
-
-/** Storage path for a driver's receipt: <user id>/<yyyy-mm>/<random>.<ext> */
-export function receiptPath(userId: string, blob: Blob, now = new Date()): string {
-  const month = now.toISOString().slice(0, 7);
-  const ext = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/png" ? "png" : blob.type === "application/pdf" ? "pdf" : "img";
-  return `${userId}/${month}/${crypto.randomUUID()}.${ext}`;
-}

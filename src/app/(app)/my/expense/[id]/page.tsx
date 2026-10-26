@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "تعديل مصروف" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function EditDriverExpensePage({ params }: { params: Promise<{ id: string }> }) {
-  const profile = await requireRole("driver");
+  await requireRole("driver");
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const supabase = await createClient();
@@ -63,7 +63,7 @@ export default async function EditDriverExpensePage({ params }: { params: Promis
       <Card className="max-w-lg">
         <CardBody>
           <DriverExpenseForm
-            userId={profile.user_id}
+            recordId={expense.id}
             trips={trips}
             categories={categories}
             today={todayIso()}

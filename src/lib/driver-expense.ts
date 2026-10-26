@@ -12,14 +12,15 @@ export type DriverExpenseValues = {
   amount_minor: number;
   payment_method: (typeof DRIVER_PAYMENT_METHODS)[number];
   description: string | null;
-  receipt_path: string | null;
+  /** Fresh upload (tmp key) to attach on save; checked again against storage by the server. */
+  receipt_upload: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Validate a driver's expense form. `userId` scopes the receipt path: a driver
- * may only attach files from their own Storage folder.
+ * Validate a driver's expense form. `userId` scopes the receipt upload: a
+ * driver may only attach a file from their own upload folder.
  */
 export function parseDriverExpense(
   get: (name: string) => string | null,
@@ -44,8 +45,10 @@ export function parseDriverExpense(
   const method = text("payment_method") || "driver_advance";
   if (!(DRIVER_PAYMENT_METHODS as readonly string[]).includes(method)) return { ok: false, error: "طريقة دفع غير صحيحة" };
 
-  const receipt = text("receipt_path");
-  if (receipt && !receipt.startsWith(`${opts.userId}/`)) return { ok: false, error: "ملف الإيصال غير صالح" };
+  const receipt = text("receipt_upload");
+  if (receipt && (!receipt.startsWith(`tmp/receipts/${opts.userId}/`) || receipt.includes(".."))) {
+    return { ok: false, error: "ملف الإيصال غير صالح" };
+  }
 
   return {
     ok: true,
@@ -57,7 +60,7 @@ export function parseDriverExpense(
       amount_minor: Number(amount),
       payment_method: method as DriverExpenseValues["payment_method"],
       description: text("description") || null,
-      receipt_path: receipt || null,
+      receipt_upload: receipt || null,
     },
   };
 }

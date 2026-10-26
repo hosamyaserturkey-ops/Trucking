@@ -44,14 +44,6 @@ export default async function ApprovalsPage() {
   const recent = recentRes.data ?? [];
   const categories = (catsRes.data ?? []).map((c) => ({ id: c.id, label: c.name_ar }));
 
-  // Short-lived links to the private receipt photos.
-  const paths = pending.map((e) => e.receipt_path).filter((p): p is string => !!p);
-  const signed = new Map<string, string>();
-  if (paths.length) {
-    const { data } = await supabase.storage.from("receipts").createSignedUrls(paths, 60 * 30);
-    for (const s of data ?? []) if (s.path && s.signedUrl) signed.set(s.path, s.signedUrl);
-  }
-
   return (
     <>
       <PageHeader title="الموافقات" subtitle="مصاريف أرسلها السائقون ولم تُحتسب بعد" />
@@ -64,13 +56,14 @@ export default async function ApprovalsPage() {
             <ul className="divide-y divide-border">
               {pending.map((e) => {
                 const j = e as unknown as Joined;
-                const url = e.receipt_path ? signed.get(e.receipt_path) : undefined;
+                // Opened through /files/…: RLS decides, and each view gets a fresh short-lived link.
+                const url = e.receipt_path ? `/files/expense/${e.id}` : undefined;
                 return (
                   <li key={e.id} className="flex flex-col gap-4 p-4 sm:flex-row" data-expense-id={e.id}>
                     <div className="shrink-0">
                       {url ? (
                         <a href={url} target="_blank" rel="noreferrer" title="فتح الإيصال بالحجم الكامل">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- signed Storage URL */}
+                          {/* eslint-disable-next-line @next/next/no-img-element -- private file behind /files/ */}
                           <img
                             src={url}
                             alt={`إيصال ${j.category?.name_ar ?? ""}`}

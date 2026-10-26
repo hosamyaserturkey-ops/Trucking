@@ -5,7 +5,10 @@
 // demo data (a trip, two expenses, an advance, a settlement), so run it against
 // demo data only.
 // Optional: BASE_URL (default http://localhost:3000), E2E_OUT (default test-results/e2e),
-// E2E_TRUCK_CODE (truck to use when the driver has no current trip, default T-01).
+// E2E_TRUCK_CODE (truck to use when the driver has no current trip, default T-01),
+// E2E_STORAGE_ORIGIN (where receipt links must point, e.g. http://127.0.0.1:9000 for a
+// local MinIO or https://<account>.r2.cloudflarestorage.com), E2E_BROWSER_PROXY (an
+// HTTPS proxy the browser must use to reach R2; its certificate is then not checked).
 // Uses the Playwright that is installed globally; `npx playwright` works too.
 const { chromium } = require("playwright");
 const fs = require("node:fs");
@@ -16,6 +19,7 @@ const OUT = process.env.E2E_OUT ?? path.join("test-results", "e2e");
 const TABS = ["", "trips", "diesel", "maintenance", "documents", "expenses", "financials"];
 const VIEWPORTS = { desktop: { width: 1280, height: 900 }, mobile: { width: 390, height: 844 } };
 
+const PROXY = process.env.E2E_BROWSER_PROXY;
 const failures = [];
 function check(ok, label) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}`);
@@ -32,7 +36,7 @@ function need(name) {
 }
 
 async function login(browser, email, password, viewport) {
-  const context = await browser.newContext({ viewport, locale: "ar-JO", timezoneId: "Asia/Amman" });
+  const context = await browser.newContext({ viewport, locale: "ar-JO", timezoneId: "Asia/Amman", ignoreHTTPSErrors: !!PROXY });
   const page = await context.newPage();
   await page.goto(`${BASE}/login`);
   await page.fill("#email", email);
@@ -126,6 +130,23 @@ async function tripAndAdvanceFlow(browser) {
   await drv.page.selectOption("#category_id", { label: "موازين ومواقف" });
   await drv.page.fill("#amount", "7.250");
   await drv.page.fill("#description", `${stamp} receipt`);
+
+  // Files storage refuses anything but images/PDF, and anything over 10 MB, before uploading.
+  const send = drv.page.getByRole("button", { name: "إرسال للموافقة" });
+  const formAlert = drv.page.locator("main [role=alert]");
+  await drv.page.setInputFiles("input[name=photo]", { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not a receipt") });
+  await send.click();
+  await formAlert.waitFor({ timeout: 15000 });
+  check((await formAlert.innerText()).includes("نوع الملف غير مسموح"), "a text file is refused as a receipt");
+  await drv.page.setInputFiles("input[name=photo]", {
+    name: "big.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(11 * 1024 * 1024)]),
+  });
+  await send.click();
+  await drv.page.getByText("10 ميغابايت").waitFor({ timeout: 15000 });
+  check(true, "a receipt over 10 MB is refused");
+  check(/\/my\/expense\/new/.test(drv.page.url()), "nothing was saved after the refused files");
   await drv.page.setInputFiles("input[name=photo]", { name: "receipt.jpg", mimeType: "image/jpeg", buffer: jpeg });
   await drv.page.screenshot({ path: path.join(OUT, "driver-expense-form.png"), fullPage: true });
   await Promise.all([
@@ -135,6 +156,20 @@ async function tripAndAdvanceFlow(browser) {
   const sent = drv.page.locator("li", { hasText: `${stamp} receipt` });
   check((await sent.innerText()).includes("بانتظار الموافقة"), "driver's expense waits for approval");
   check((await sent.locator("[aria-label='مرفق إيصال']").count()) === 1, "receipt photo is attached");
+
+  // The receipt opens through /files/…: a redirect to a short-lived link on the file storage, not Supabase.
+  const receiptHref = await sent.locator("a[href^='/files/expense/']").getAttribute("href");
+  const opened = await drv.page.request.get(`${BASE}${receiptHref}`, { maxRedirects: 0 });
+  const location = opened.headers()["location"] ?? "";
+  check(opened.status() === 302 && !/supabase\.co/.test(location), "driver's receipt link redirects to the file storage");
+  if (process.env.E2E_STORAGE_ORIGIN) {
+    check(location.startsWith(`${process.env.E2E_STORAGE_ORIGIN}/`), `receipt is served from ${process.env.E2E_STORAGE_ORIGIN}`);
+  }
+  const signed = new URL(location);
+  check(Number(signed.searchParams.get("X-Amz-Expires")) <= 1800, "view link expires within 30 minutes");
+  const photo = await drv.page.request.get(location);
+  check(photo.status() === 200 && /^image\//.test(photo.headers()["content-type"] ?? ""), "the stored receipt photo downloads");
+  const receiptExpenseId = receiptHref.split("/").pop();
   await drv.page.click('a[href^="/my/expense/new"]');
   await drv.page.waitForURL(/\/my\/expense\/new/);
   await drv.page.selectOption("#category_id", { label: "إعاشة" });
@@ -162,6 +197,21 @@ async function tripAndAdvanceFlow(browser) {
     img.complete ? img.naturalWidth : new Promise((resolve) => (img.onload = () => resolve(img.naturalWidth))),
   );
   check(photoWidth > 0, "receipt photo loads from private storage");
+  const accView = await acc.page.request.get(`${BASE}/files/expense/${receiptExpenseId}`, { maxRedirects: 0 });
+  check(accView.status() === 302, "accountant can open the driver's receipt");
+
+  // Another driver's expense: hidden by RLS, so the driver gets no link at all.
+  const foreignId = await acc.page
+    .locator("li[data-expense-id]")
+    .filter({ hasNotText: driverName })
+    .first()
+    .getAttribute("data-expense-id");
+  const foreign = await drv.page.request.get(`${BASE}/files/expense/${foreignId}`, { maxRedirects: 0 });
+  check(foreign.status() === 404 && !foreign.headers()["location"], "a driver gets no link to another driver's expense file");
+  for (const odd of [`/files/secrets/${receiptExpenseId}`, "/files/expense/not-an-id", "/files/expense/%2e%2e%2fsecret"]) {
+    const res = await drv.page.request.get(`${BASE}${odd}`, { maxRedirects: 0 });
+    check(res.status() === 404 && !res.headers()["location"], `no link for ${odd}`);
+  }
   await acc.page.screenshot({ path: path.join(OUT, "approvals.png"), fullPage: true });
   await toApprove.getByRole("button", { name: "اعتماد" }).click();
   await toApprove.waitFor({ state: "detached", timeout: 20000 });
@@ -225,7 +275,7 @@ async function tripAndAdvanceFlow(browser) {
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(PROXY ? { proxy: { server: PROXY, bypass: "localhost,127.0.0.1" } } : {});
 
   // Manager: fleet board and every Truck 360 tab, desktop and phone width.
   let truckId = null;

@@ -3,15 +3,15 @@
 import { startTransition, useActionState, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import type { DriverFormState } from "@/app/(app)/my/actions";
-import { createClient } from "@/lib/supabase/client";
-import { compressImage, receiptPath } from "@/lib/image";
+import { uploadFile } from "@/lib/upload-client";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 
 type Option = { id: string; label: string };
 
 type Props = {
-  userId: string;
+  /** The expense being edited, so the server can check it may still get a new photo. */
+  recordId?: string;
   trips: Option[];
   categories: Option[];
   today: string;
@@ -30,7 +30,7 @@ type Props = {
 };
 
 /** Phone-first expense form. The photo is shrunk and uploaded before the form is saved. */
-export function DriverExpenseForm({ userId, trips, categories, today, initial = {}, action, submitLabel }: Props) {
+export function DriverExpenseForm({ recordId, trips, categories, today, initial = {}, action, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -45,22 +45,15 @@ export function DriverExpenseForm({ userId, trips, categories, today, initial = 
     formData.delete("photo");
     const file = fileRef.current?.files?.[0];
     if (file) {
+      // Straight from the phone to storage, through a short-lived link the server signs.
       setUploading(true);
-      try {
-        const blob = await compressImage(file);
-        const path = receiptPath(userId, blob);
-        const { error } = await createClient().storage.from("receipts").upload(path, blob, {
-          contentType: blob.type || "image/jpeg",
-          upsert: false,
-        });
-        if (error) throw error;
-        formData.set("receipt_path", path);
-      } catch {
-        setUploading(false);
-        setUploadError("تعذر رفع صورة الإيصال. تحقق من الاتصال وحاول مرة أخرى.");
+      const uploaded = await uploadFile(file, "expense_receipt", recordId);
+      setUploading(false);
+      if (!uploaded.ok) {
+        setUploadError(uploaded.error);
         return;
       }
-      setUploading(false);
+      formData.set("receipt_upload", uploaded.key);
     }
     startTransition(() => formAction(formData));
   }
@@ -152,7 +145,7 @@ export function DriverExpenseForm({ userId, trips, categories, today, initial = 
               ref={fileRef}
               name="photo"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,image/*"
               capture="environment"
               className="sr-only"
               onChange={(e) => {
