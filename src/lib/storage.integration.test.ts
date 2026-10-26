@@ -30,7 +30,8 @@ async function upload(contentType: string, body: Uint8Array<ArrayBuffer>, userId
   return { link, res };
 }
 
-describe.skipIf(!enabled)("storage against a live S3-compatible server", () => {
+// Real R2 is a few hundred ms per request, so the default 5 s is too tight.
+describe.skipIf(!enabled)("storage against a live S3-compatible server", { timeout: 20_000 }, () => {
   beforeAll(async () => {
     if (!/r2\.cloudflarestorage\.com$/.test(new URL(storageConfig().endpoint).hostname)) await createBucketIfMissing();
   });
