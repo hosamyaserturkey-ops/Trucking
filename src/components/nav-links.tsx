@@ -39,7 +39,8 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function NavLinks({ items }: { items: NavItem[] }) {
+/** `counts` adds a small badge to an item, e.g. expenses waiting for approval. */
+export function NavLinks({ items, counts = {} }: { items: NavItem[]; counts?: Record<string, number> }) {
   const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-0.5">
@@ -58,6 +59,11 @@ export function NavLinks({ items }: { items: NavItem[] }) {
             >
               <Icon className="size-4 shrink-0" aria-hidden />
               {item.label}
+              {counts[item.href] ? (
+                <span className="num ms-auto rounded-full bg-warning-soft px-2 text-xs font-semibold text-warning">
+                  {counts[item.href]}
+                </span>
+              ) : null}
             </Link>
           </li>
         );

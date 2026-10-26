@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, FileWarning, Wrench } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, FileWarning, Wrench } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -21,7 +21,7 @@ export default async function FleetPage() {
   const month = resolveRange({ range: "month" });
   const supabase = await createClient();
 
-  const [trucksRes, docsRes, servicesRes, pnlRes] = await Promise.all([
+  const [trucksRes, docsRes, servicesRes, pnlRes, pendingRes] = await Promise.all([
     supabase.from("truck_overview_v").select("*").order("code"),
     supabase
       .from("document_expiry_v")
@@ -35,7 +35,11 @@ export default async function FleetPage() {
     finance
       ? supabase.rpc("truck_pnl_summary", { p_from: month.from, p_to: month.to })
       : Promise.resolve({ data: [] as { truck_id: string; kind: string; amount_base_minor: number }[] }),
+    finance
+      ? supabase.from("expenses").select("id", { count: "exact", head: true }).eq("status", "submitted")
+      : Promise.resolve({ count: 0 }),
   ]);
+  const pendingApprovals = pendingRes.count ?? 0;
 
   const trucks = trucksRes.data ?? [];
   const docs = docsRes.data ?? [];
@@ -50,6 +54,19 @@ export default async function FleetPage() {
   return (
     <>
       <PageHeader title="الأسطول" subtitle={`${trucks.length} شاحنة · ${month.label}`} />
+
+      {pendingApprovals > 0 ? (
+        <Link
+          href="/approvals"
+          className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning hover:underline"
+        >
+          <span className="flex items-center gap-2">
+            <ClipboardCheck className="size-4" aria-hidden />
+            بانتظار الموافقة: <span className="num font-bold">{formatInt(pendingApprovals)}</span> مصروف من السائقين
+          </span>
+          <span className="font-semibold">مراجعة</span>
+        </Link>
+      ) : null}
 
       <StatGrid>
         <Stat label="في رحلة" value={formatInt(count("on_trip"))} tone="info" />
