@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { todayIso } from "@/lib/date-range";
 import { loadDriverFuelOptions } from "@/lib/driver-data";
+import { loadLastFuelPrices } from "@/lib/fuel-prices";
 import { nowTime } from "@/lib/fuel";
 import { saveDriverFillup } from "../../actions";
 import { LinkButton } from "@/components/ui/button";
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "تعبئة ديزل" };
 export default async function NewDriverFillupPage({ searchParams }: { searchParams: Promise<{ trip?: string }> }) {
   await requireRole("driver");
   const { trip } = await searchParams;
-  const { trips, stations, truck } = await loadDriverFuelOptions();
+  const [{ trips, stations, truck }, lastPrices] = await Promise.all([loadDriverFuelOptions(), loadLastFuelPrices()]);
 
   return (
     <>
@@ -33,6 +34,7 @@ export default async function NewDriverFillupPage({ searchParams }: { searchPara
           <DriverFuelForm
             trips={trips}
             stations={stations}
+            lastPrices={lastPrices}
             truckLabel={truck?.code ?? null}
             lastOdometer={truck?.lastOdometer ?? null}
             today={todayIso()}

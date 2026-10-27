@@ -6,7 +6,7 @@ import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
-import { pricePerLiter } from "@/lib/fuel";
+import { FUEL_UNITS, formatQuantity, isFuelUnit } from "@/lib/fuel";
 import { loadFuelChecks } from "@/lib/fuel-context";
 import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
 import { approveExpense, approveFillup, rejectExpense, rejectFillup } from "./actions";
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "الموافقات" };
 const EXPENSE_FIELDS =
   "id, expense_date, description, currency, amount_minor, amount_base_minor, fx_rate, payment_method, status, rejection_reason, receipt_path, created_at, reviewed_at, category_id, category:expense_categories(name_ar), driver:drivers(id, full_name), truck:trucks(id, code), trip:trips(id, trip_no)";
 const FUEL_FIELDS =
-  "id, truck_id, filled_at, odometer, liters, is_full_tank, currency, amount_minor, fx_rate, payment_method, status, rejection_reason, receipt_path, notes, created_at, reviewed_at, driver:drivers(id, full_name), truck:trucks(id, code), trip:trips(id, trip_no), station:suppliers(name)";
+  "id, truck_id, filled_at, odometer, liters, qty_unit, quantity, unit_price_minor, is_full_tank, currency, amount_minor, fx_rate, payment_method, status, rejection_reason, receipt_path, notes, created_at, reviewed_at, driver:drivers(id, full_name), truck:trucks(id, code), trip:trips(id, trip_no), station:suppliers(name)";
 
 type Joined = {
   category?: { name_ar: string } | null;
@@ -89,7 +89,7 @@ export default async function ApprovalsPage() {
   const pending = pendingRes.data ?? [];
   const fuel = fuelRes.data ?? [];
   const categories = (catsRes.data ?? []).map((c) => ({ id: c.id, label: c.name_ar }));
-  const checks = await loadFuelChecks(fuel.map((f) => ({ ...f, liters: Number(f.liters) })));
+  const checks = await loadFuelChecks(fuel.map((f) => ({ ...f, liters: f.liters === null ? null : Number(f.liters) })));
 
   const recent = [
     ...(recentRes.data ?? []).map((e) => ({
@@ -105,7 +105,7 @@ export default async function ApprovalsPage() {
       key: `f-${f.id}`,
       at: f.reviewed_at,
       who: (f as unknown as Joined).driver?.full_name,
-      what: `ديزل · ${formatDecimal(Number(f.liters))} لتر`,
+      what: `ديزل · ${formatQuantity(Number(f.quantity), f.qty_unit)}`,
       amount: formatMoney(f.amount_minor, f.currency),
       status: f.status,
       reason: f.rejection_reason,
@@ -174,9 +174,8 @@ export default async function ApprovalsPage() {
             <ul className="divide-y divide-border">
               {fuel.map((f) => {
                 const j = f as unknown as Joined;
-                const liters = Number(f.liters);
                 const check = checks.get(f.id);
-                const perLiter = pricePerLiter(f.amount_minor, liters);
+                const unit = isFuelUnit(f.qty_unit) ? FUEL_UNITS[f.qty_unit] : FUEL_UNITS.liter;
                 return (
                   <li key={f.id} className="flex flex-col gap-4 p-4 sm:flex-row" data-fillup-id={f.id}>
                     <div className="shrink-0">
@@ -186,7 +185,7 @@ export default async function ApprovalsPage() {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0 text-sm">
                           <p className="font-semibold">
-                            ديزل <span className="num">{formatDecimal(liters)}</span> لتر ·{" "}
+                            ديزل <span className="num">{formatQuantity(Number(f.quantity), f.qty_unit)}</span> ·{" "}
                             <span className="num">{formatMoney(f.amount_minor, f.currency)}</span>
                           </p>
                           <Who j={j} />
@@ -196,9 +195,11 @@ export default async function ApprovalsPage() {
                             {j.station ? ` · ${j.station.name}` : ""} · {PAYMENT_METHOD[f.payment_method] ?? f.payment_method}
                           </p>
                           <p className="text-muted">
-                            سعر اللتر <span className="num">{perLiter !== null ? formatMoney(perLiter, f.currency) : "—"}</span>
+                            {unit.price} <span className="num">{formatMoney(f.unit_price_minor, f.currency)}</span>
                             {" · "}
-                            {check?.kmPerLiter != null ? (
+                            {f.qty_unit !== "liter" ? (
+                              "لا يُحسب كم/لتر للتعبئة بالقلن أو التنكة"
+                            ) : check?.kmPerLiter != null ? (
                               <span className={check.abnormal ? "font-semibold text-danger" : ""}>
                                 <span className="num">{formatDecimal(check.kmPerLiter)}</span> كم/لتر
                                 {check.baseline != null ? (
@@ -228,8 +229,9 @@ export default async function ApprovalsPage() {
                         approve={approveFillup.bind(null, f.id)}
                         reject={rejectFillup.bind(null, f.id)}
                         initial={{
-                          liters: String(liters),
-                          amount: formatMoney(f.amount_minor, f.currency, { withCurrency: false }),
+                          qty_unit: f.qty_unit,
+                          quantity: String(f.quantity),
+                          unit_price: formatMoney(f.unit_price_minor, f.currency, { withCurrency: false }),
                           odometer: String(f.odometer),
                           is_full_tank: f.is_full_tank,
                           currency: f.currency,

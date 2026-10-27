@@ -46,10 +46,11 @@ export async function saveOfficeFillup(id: string | null, _prev: FillupFormState
     station_id: v.station_id,
     filled_at: v.filled_at,
     odometer: v.odometer,
-    liters: v.liters,
+    qty_unit: v.qty_unit,
+    quantity: v.quantity,
+    unit_price_minor: v.unit_price_minor,
     is_full_tank: v.is_full_tank,
     currency: v.currency,
-    amount_minor: v.amount_minor,
     fx_rate,
     payment_method: v.payment_method,
     notes: v.notes,
@@ -72,7 +73,8 @@ export async function saveOfficeFillup(id: string | null, _prev: FillupFormState
     }
     await afterFileSaved("fuel_receipt", v.receipt_upload, receipt_path ? old?.receipt_path : null);
   } else {
-    const { error } = await supabase.from("fuel_fillups").insert({ ...row, receipt_path });
+    // The database recomputes the cost (quantity x unit price) on every write.
+    const { error } = await supabase.from("fuel_fillups").insert({ ...row, amount_minor: v.amount_minor, receipt_path });
     if (error) {
       await removeFile("fuel_receipt", receipt_path);
       return { error: dbMessage(error) };

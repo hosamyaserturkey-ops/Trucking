@@ -186,10 +186,11 @@ async function tripAndAdvanceFlow(browser) {
   check((await drv.page.inputValue("#trip_id")) === tripId, "diesel form defaults to the running trip");
   const lastOdo = Number((/([\d,]+) كم/.exec(await drv.page.locator("text=آخر قراءة مسجلة").innerText())?.[1] ?? "0").replace(/,/g, ""));
   await drv.page.fill("#odometer", String(lastOdo + 300));
-  await drv.page.fill("#liters", "120");
-  await drv.page.fill("#amount", "78");
+  check((await drv.page.locator("label[for=quantity]").innerText()) === "عدد اللترات", "diesel form is in liters by default");
+  await drv.page.fill("#quantity", "120");
+  await drv.page.fill("#unit_price", "0.650");
   await drv.page.fill("#notes", `${stamp} fuel`);
-  check((await drv.page.locator("text=سعر اللتر").innerText()).includes("0.650"), "diesel form shows the price per liter");
+  check((await drv.page.locator("text=الكلفة").innerText()).includes("78.000"), "diesel form shows the cost: liters x price per liter");
   const fuelSend = drv.page.getByRole("button", { name: "إرسال للموافقة" });
   await fuelSend.click();
   await drv.page.locator("main [role=alert]").waitFor({ timeout: 15000 });
@@ -199,7 +200,7 @@ async function tripAndAdvanceFlow(browser) {
   check(fuelForm.rtl && fuelForm.noSideScroll, "diesel form is RTL without sideways scroll on a phone");
   await drv.page.screenshot({ path: path.join(OUT, "driver-fuel-form.png"), fullPage: true });
   await Promise.all([drv.page.waitForURL(/\/my\?saved=fuel/, { timeout: 30000 }), fuelSend.click()]);
-  const sentFuel = drv.page.locator("li", { hasText: "ديزل · 120.00 لتر" }).filter({ hasText: "بانتظار الموافقة" }).first();
+  const sentFuel = drv.page.locator("li", { hasText: "ديزل · 120 لتر" }).filter({ hasText: "بانتظار الموافقة" }).first();
   check((await sentFuel.count()) === 1, "driver's fill-up waits for approval");
   check((await sentFuel.locator("a[href^='/files/fuel/']").count()) === 1, "fill-up receipt is attached");
 
@@ -257,7 +258,7 @@ async function tripAndAdvanceFlow(browser) {
   await fillRow.waitFor({ state: "detached", timeout: 20000 });
   check(true, "accountant approves the fill-up");
   await acc.page.goto(`${BASE}/trucks/${truckId}/diesel?range=month`);
-  check((await acc.page.locator("tr", { hasText: "120.00" }).count()) >= 1, "approved fill-up shows on the truck's Diesel tab");
+  check((await acc.page.locator("tr", { hasText: "120 لتر" }).count()) >= 1, "approved fill-up shows on the truck's Diesel tab");
 
   await acc.page.goto(`${BASE}/trucks/${truckId}/expenses?range=month`);
   const row = acc.page.locator("tr", { hasText: `${stamp} receipt` });
@@ -277,7 +278,7 @@ async function tripAndAdvanceFlow(browser) {
   err = await clickAndWait(acc.page, acc.page.getByRole("button", { name: "تسجيل العهدة" }), acc.page.getByText("تم تسجيل العهدة."));
   check(!err, `accountant issues an advance${err ? `: ${err}` : ""}`);
   check((await acc.page.locator("tr", { hasText: stamp }).count()) === 2, "advance and approved expense are open movements");
-  check((await acc.page.locator("tr", { hasText: "ديزل · 120.00 لتر" }).count()) >= 1, "driver-paid diesel is an open movement");
+  check((await acc.page.locator("tr", { hasText: "ديزل · 120 لتر" }).count()) >= 1, "driver-paid diesel is an open movement");
   await acc.page.screenshot({ path: path.join(OUT, "advance-driver.png"), fullPage: true });
   await Promise.all([
     acc.page.waitForURL(/settled=/, { timeout: 20000 }),
@@ -291,7 +292,7 @@ async function tripAndAdvanceFlow(browser) {
   await slip.goto(`${BASE}${slipHref}`);
   const slipText = await slip.locator("main").innerText();
   check(slipText.includes(`${stamp} receipt`) && slipText.includes(stamp), "settlement slip lists the advance and the expense");
-  check(slipText.includes("ديزل دفعه السائق") && slipText.includes("120.00"), "settlement slip lists the diesel");
+  check(slipText.includes("ديزل دفعه السائق") && slipText.includes("120 لتر"), "settlement slip lists the diesel");
   await slip.pdf({ path: path.join(OUT, "settlement.pdf"), format: "A4", printBackground: true });
   check(fs.statSync(path.join(OUT, "settlement.pdf")).size > 10000, "settlement slip exports to PDF");
 
@@ -362,6 +363,50 @@ async function tripAndAdvanceFlow(browser) {
     "dispatcher sees expenses but cannot add them");
   await disp.page.goto(`${BASE}/expenses/new`);
   check(new URL(disp.page.url()).pathname !== "/expenses/new", "dispatcher is kept out of the expense form");
+
+  // 9b. Diesel by the gallon (قلن) from the office. A dispatcher's entry waits for approval;
+  // its cost is gallons x price per gallon, and that price is suggested next time at that station.
+  await disp.page.goto(`${BASE}/diesel/new`);
+  const gallonTruck = await disp.page.locator("#truck_id option").filter({ hasNotText: truckCode }).nth(6).getAttribute("value");
+  await disp.page.selectOption("#truck_id", gallonTruck);
+  const gallonOdo = Number((/([\d,]+) كم/.exec(await disp.page.locator("text=آخر قراءة مسجلة").innerText())?.[1] ?? "0").replace(/,/g, ""));
+  await disp.page.fill("#odometer", String(gallonOdo + 150));
+  const gallonStation = await disp.page.locator("#station_id option").nth(1).getAttribute("value");
+  await disp.page.selectOption("#station_id", gallonStation);
+  const gallonUnit = disp.page.locator("label:has(input[name=qty_unit][value=gallon])");
+  await gallonUnit.click();
+  check((await disp.page.locator("label[for=quantity]").innerText()) === "عدد القلنات" && (await disp.page.locator("label[for=unit_price]").innerText()) === "سعر القلن",
+    "choosing قلن asks for the number of gallons and the price per gallon");
+  await disp.page.fill("#quantity", "30");
+  await disp.page.fill("#unit_price", "3");
+  await disp.page.fill("#notes", `${stamp} gallon`);
+  check((await disp.page.locator("text=الكلفة").innerText()).includes("90.000"), "the cost is gallons x price per gallon");
+  const gallonForm = await layoutOk(disp.page);
+  check(gallonForm.rtl && gallonForm.noSideScroll, "office diesel form has no sideways scroll");
+  await disp.page.screenshot({ path: path.join(OUT, "diesel-gallon-form.png"), fullPage: true });
+  await Promise.all([disp.page.waitForURL(/\/diesel\?saved=1/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعبئة" }).click()]);
+  const gallonRow = disp.page.locator("tr", { hasText: "30 قلن" }).filter({ hasText: "بانتظار الموافقة" });
+  const gallonText = (await gallonRow.count()) === 1 ? await gallonRow.innerText() : "";
+  check(gallonText.includes("3.000") && gallonText.includes("90.000"), "the diesel log shows 30 قلن, the price per gallon and the cost in JOD");
+
+  await disp.page.goto(`${BASE}/diesel/new`);
+  await disp.page.selectOption("#station_id", gallonStation);
+  await gallonUnit.click();
+  check((await disp.page.inputValue("#unit_price")) === "3.000", "the next gallon fill-up at that station suggests its last price");
+
+  await acc.page.goto(`${BASE}/approvals`);
+  const gallonReview = acc.page.locator("li[data-fillup-id]", { hasText: `${stamp} gallon` });
+  const reviewText = (await gallonReview.count()) === 1 ? await gallonReview.innerText() : "";
+  check(reviewText.includes("30 قلن") && reviewText.includes("سعر القلن") && reviewText.includes("لا يُحسب كم/لتر"),
+    "approvals shows the gallons and their price, with no km/L");
+  check((await gallonReview.locator("input[name=quantity]").inputValue()) === "30", "the reviewer corrects it in gallons");
+
+  await disp.page.goto(`${BASE}/diesel`);
+  await disp.page.locator("tr", { hasText: "30 قلن" }).filter({ hasText: "بانتظار الموافقة" }).getByRole("link", { name: "تعديل" }).click();
+  await disp.page.waitForURL(/\/diesel\/[0-9a-f-]{36}\/edit/);
+  check((await disp.page.inputValue("#quantity")) === "30" && (await disp.page.inputValue("#unit_price")) === "3.000", "the edit form keeps the gallons and price");
+  await Promise.all([disp.page.waitForURL(/\/diesel$/, { timeout: 20000 }), disp.page.getByRole("button", { name: "حذف" }).click()]);
+  check((await disp.page.locator("tr", { hasText: "30 قلن" }).filter({ hasText: "بانتظار الموافقة" }).count()) === 0, "dispatcher deletes the waiting gallon fill-up");
 
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).

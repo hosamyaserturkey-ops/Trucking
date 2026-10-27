@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import type { DriverFormState } from "@/app/(app)/my/actions";
-import { formatMoney, parseMoney } from "@/lib/money";
-import { pricePerLiter } from "@/lib/fuel";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
+import { FuelQuantityFields, type FuelQuantityInitial, type LastFuelPrices } from "@/components/fuel-quantity-fields";
 
 type Option = { id: string; label: string };
 
@@ -14,20 +12,17 @@ type Props = {
   recordId?: string;
   trips: Option[];
   stations: Option[];
+  lastPrices: LastFuelPrices;
   truckLabel: string | null;
   lastOdometer: number | null;
   today: string;
   time: string;
-  initial?: {
+  initial?: FuelQuantityInitial & {
     trip_id?: string | null;
-    station_id?: string | null;
     filled_on?: string;
     filled_time?: string;
     odometer?: string;
-    liters?: string;
     is_full_tank?: boolean;
-    currency?: string;
-    amount?: string;
     notes?: string | null;
     hasReceipt?: boolean;
   };
@@ -36,15 +31,8 @@ type Props = {
 };
 
 /** Phone form for a fill-up paid from the advance. The receipt photo is required. */
-export function DriverFuelForm({ recordId, trips, stations, truckLabel, lastOdometer, today, time, initial = {}, action, submitLabel }: Props) {
+export function DriverFuelForm({ recordId, trips, stations, lastPrices, truckLabel, lastOdometer, today, time, initial = {}, action, submitLabel }: Props) {
   const { busy, uploading, pending, error, onSubmit } = useReceiptAction(action, "fuel_receipt", recordId);
-  const [amount, setAmount] = useState(initial.amount ?? "");
-  const [liters, setLiters] = useState(initial.liters ?? "");
-  const [currency, setCurrency] = useState(initial.currency ?? "JOD");
-
-  const amountMinor = parseMoney(amount, currency);
-  const litersNum = Number(liters.replace(/,/g, ""));
-  const perLiter = amountMinor !== null && litersNum > 0 ? pricePerLiter(Number(amountMinor), litersNum) : null;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -74,57 +62,11 @@ export function DriverFuelForm({ recordId, trips, stations, truckLabel, lastOdom
         >
           <Input id="odometer" name="odometer" inputMode="numeric" dir="ltr" defaultValue={initial.odometer ?? ""} className="text-lg" required />
         </Field>
-        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-          <Field label="عدد اللترات" htmlFor="liters">
-            <Input
-              id="liters"
-              name="liters"
-              inputMode="decimal"
-              dir="ltr"
-              value={liters}
-              onChange={(e) => setLiters(e.target.value)}
-              className="text-lg"
-              required
-            />
-          </Field>
-          <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
-            <input type="checkbox" name="is_full_tank" defaultChecked={initial.is_full_tank ?? true} className="size-4" />
-            تعبئة كاملة
-          </label>
-        </div>
-        <div className="grid grid-cols-[1fr_auto] gap-3">
-          <Field label="المبلغ المدفوع" htmlFor="amount">
-            <Input
-              id="amount"
-              name="amount"
-              inputMode="decimal"
-              dir="ltr"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="text-lg"
-              required
-            />
-          </Field>
-          <Field label="العملة" htmlFor="currency">
-            <Select id="currency" name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              <option value="JOD">دينار</option>
-              <option value="USD">دولار</option>
-            </Select>
-          </Field>
-        </div>
-        <p className="-mt-2 text-sm text-muted" aria-live="polite">
-          سعر اللتر: <span className="num font-medium text-text">{perLiter !== null ? formatMoney(perLiter, currency) : "—"}</span>
-        </p>
-        <Field label="المحطة (اختياري)" htmlFor="station_id">
-          <Select id="station_id" name="station_id" defaultValue={initial.station_id ?? ""}>
-            <option value="">—</option>
-            {stations.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <FuelQuantityFields stations={stations} lastPrices={lastPrices} initial={initial} large />
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="is_full_tank" defaultChecked={initial.is_full_tank ?? true} className="size-4" />
+          تعبئة كاملة (فل)
+        </label>
         <Field label="ملاحظة" htmlFor="notes">
           <Input id="notes" name="notes" defaultValue={initial.notes ?? ""} />
         </Field>

@@ -8,6 +8,7 @@ import { todayIso } from "@/lib/date-range";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
 import { EXPENSE_STATUS, PAYMENT_METHOD, TRIP_STATUS } from "@/lib/labels";
+import { formatQuantity, quantitySummary } from "@/lib/fuel";
 import { changeTripStatus } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -37,7 +38,11 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
       .select("start_odometer, end_odometer, cargo_weight_tons, fx_rate, notes, entry_source, client_ref, client_doc_no, truck:trucks(code, plate_number)")
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("fuel_fillups").select("id, filled_at, odometer, liters, is_full_tank, amount_base_minor").eq("trip_id", id).order("filled_at"),
+    supabase
+      .from("fuel_fillups")
+      .select("id, filled_at, odometer, qty_unit, quantity, is_full_tank, amount_base_minor, status, station:suppliers(name)")
+      .eq("trip_id", id)
+      .order("filled_at"),
     supabase
       .from("expenses")
       .select("id, expense_date, description, currency, amount_minor, amount_base_minor, payment_method, status, category:expense_categories(name_ar)")
@@ -52,6 +57,8 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const truck = raw.truck as { code: string; plate_number: string } | null;
   const st = TRIP_STATUS[trip.status ?? "planned"];
   const fuel = fuelRes.data ?? [];
+  // Counted diesel only (approved), per unit: gallons and tanks have no liters.
+  const fuelQty = quantitySummary(fuel.filter((f) => f.status === "approved")) || "—";
   const expenses = expensesRes.data ?? [];
   const advances = advancesRes.data ?? [];
   const today = todayIso();
@@ -160,7 +167,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
               hint="الأجرة ناقص الديزل والمصاريف المعتمدة"
             />
           ) : (
-            <Stat label="الديزل" value={`${formatDecimal(trip.fuel_liters)} لتر`} />
+            <Stat label="الديزل" value={fuelQty} />
           )}
         </StatGrid>
 
@@ -231,16 +238,22 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
 
         <div className="grid gap-5 lg:grid-cols-2">
           <Card>
-            <CardHeader title="الديزل" subtitle={`${formatDecimal(trip.fuel_liters)} لتر · ${formatMoney(trip.fuel_base_minor)}`} />
+            <CardHeader title="الديزل" subtitle={`${fuelQty} · ${formatMoney(trip.fuel_base_minor)}`} />
             {fuel.length === 0 ? (
               <EmptyState>لا توجد تعبئات على هذه الرحلة.</EmptyState>
             ) : (
               <ul className="divide-y divide-border text-sm">
                 {fuel.map((f) => (
                   <li key={f.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
-                    <span className="num">{formatDateTime(f.filled_at)}</span>
+                    <span>
+                      <span className="num">{formatDateTime(f.filled_at)}</span>
+                      {(f.station as { name: string } | null)?.name ? (
+                        <span className="text-muted"> · {(f.station as { name: string }).name}</span>
+                      ) : null}
+                      {f.status !== "approved" ? <span className="text-muted"> · {EXPENSE_STATUS[f.status]?.label}</span> : null}
+                    </span>
                     <span className="num">
-                      {formatDecimal(f.liters)} لتر · {formatMoney(f.amount_base_minor)}
+                      {formatQuantity(Number(f.quantity), f.qty_unit)} · {formatMoney(f.amount_base_minor)}
                     </span>
                   </li>
                 ))}

@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, FUEL_WRITERS, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { inclusiveEnd, resolveRange } from "@/lib/date-range";
-import { pricePerLiter, weightedKmPerLiter, zonedIso } from "@/lib/fuel";
+import { formatQuantity, quantitySummary, weightedKmPerLiter, zonedIso } from "@/lib/fuel";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDateTime, formatDecimal, formatInt } from "@/lib/format";
 import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
@@ -21,6 +21,7 @@ type SearchParams = Promise<{
   status?: string;
   truck?: string;
   driver?: string;
+  station?: string;
   abnormal?: string;
   from?: string;
   to?: string;
@@ -58,13 +59,14 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
   const status = sp.status && EXPENSE_STATUS[sp.status] ? sp.status : "";
   const truck = sp.truck && UUID.test(sp.truck) ? sp.truck : "";
   const driver = sp.driver && UUID.test(sp.driver) ? sp.driver : "";
+  const station = sp.station && UUID.test(sp.station) ? sp.station : "";
   const abnormalOnly = sp.abnormal === "1";
 
   const supabase = await createClient();
   let fillsQuery = supabase
     .from("fuel_fillups")
     .select(
-      "id, filled_at, odometer, liters, is_full_tank, currency, amount_minor, amount_base_minor, payment_method, status, receipt_path, settlement_id, truck_id, driver_id, truck:trucks(code), driver:drivers(full_name)",
+      "id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, amount_minor, amount_base_minor, payment_method, status, receipt_path, settlement_id, truck_id, driver_id, truck:trucks(code), driver:drivers(full_name), station:suppliers(name)",
     )
     .gte("filled_at", zonedIso(range.from, "00:00"))
     .lt("filled_at", zonedIso(range.to, "00:00"))
@@ -73,21 +75,24 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
   if (status) fillsQuery = fillsQuery.eq("status", status);
   if (truck) fillsQuery = fillsQuery.eq("truck_id", truck);
   if (driver) fillsQuery = fillsQuery.eq("driver_id", driver);
+  if (station) fillsQuery = fillsQuery.eq("station_id", station);
 
   // Approved fill-ups with their km/L (full-tank method) for totals and rankings.
   let effQuery = supabase
     .from("fuel_efficiency_v")
-    .select("id, truck_id, driver_id, liters, amount_base_minor, km_since_last_full, km_per_liter, baseline_km_per_liter, is_abnormal")
+    .select("id, truck_id, driver_id, qty_unit, quantity, liters, amount_base_minor, km_since_last_full, km_per_liter, baseline_km_per_liter, is_abnormal")
     .gte("filled_on", range.from)
     .lt("filled_on", range.to);
   if (truck) effQuery = effQuery.eq("truck_id", truck);
   if (driver) effQuery = effQuery.eq("driver_id", driver);
+  if (station) effQuery = effQuery.eq("station_id", station);
 
-  const [fillsRes, effRes, trucksRes, driversRes] = await Promise.all([
+  const [fillsRes, effRes, trucksRes, driversRes, stationsRes] = await Promise.all([
     fillsQuery,
     effQuery,
     supabase.from("trucks").select("id, code").order("code"),
     supabase.from("drivers").select("id, full_name").order("full_name"),
+    supabase.from("suppliers").select("id, name").eq("kind", "fuel_station").order("name"),
   ]);
   const eff = effRes.data ?? [];
   const effById = new Map(eff.map((e) => [e.id!, e]));
@@ -96,8 +101,12 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
 
   const truckCode = new Map((trucksRes.data ?? []).map((t) => [t.id, t.code]));
   const driverName = new Map((driversRes.data ?? []).map((d) => [d.id, d.full_name]));
-  const liters = eff.reduce((s, e) => s + Number(e.liters ?? 0), 0);
+  // Approved quantities per unit; the price per liter only from fill-ups in liters.
+  const literRows = eff.filter((e) => e.qty_unit === "liter");
+  const liters = literRows.reduce((s, e) => s + Number(e.quantity ?? 0), 0);
+  const litersCost = sumMinor(literRows.map((e) => e.amount_base_minor));
   const cost = sumMinor(eff.map((e) => e.amount_base_minor));
+  const quantities = quantitySummary(eff, 0);
   const measured = eff.map((e) => ({
     km: e.km_since_last_full,
     kmPerLiter: e.km_per_liter,
@@ -162,6 +171,17 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
+          المحطة
+          <select name="station" defaultValue={station} className={select}>
+            <option value="">الكل</option>
+            {(stationsRes.data ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted">
           من
           <input type="date" name="from" defaultValue={range.from} className={select} dir="ltr" />
         </label>
@@ -185,9 +205,9 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
           </p>
         ) : null}
         <StatGrid>
-          <Stat label="لترات معتمدة" value={formatDecimal(liters, 0)} />
+          <Stat label="الكمية المعتمدة" value={quantities || "—"} />
           {finance ? <Stat label="تكلفة الديزل" value={formatMoney(cost, "JOD", { fractionDigits: 0 })} /> : null}
-          <Stat label="متوسط سعر اللتر" value={liters > 0 ? formatMoney(Math.round(cost / liters), "JOD") : "—"} />
+          <Stat label="متوسط سعر اللتر" value={liters > 0 ? formatMoney(Math.round(litersCost / liters), "JOD") : "—"} />
           <Stat label="متوسط كم/لتر" value={avgKmPerLiter !== null ? formatDecimal(avgKmPerLiter) : "—"} />
           <Stat label="استهلاك غير طبيعي" value={formatInt(abnormalCount)} tone={abnormalCount ? "danger" : "success"} />
           <Stat label="بانتظار الموافقة" value={formatInt(waiting)} tone={waiting ? "warning" : "neutral"} />
@@ -246,10 +266,11 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
                   <Th>الوقت</Th>
                   <Th>الشاحنة</Th>
                   <Th>السائق</Th>
+                  <Th>المحطة</Th>
+                  <Th className="text-end">الكمية</Th>
+                  <Th className="text-end">سعر الوحدة</Th>
+                  <Th className="text-end">الكلفة (د.أ)</Th>
                   <Th className="text-end">العداد</Th>
-                  <Th className="text-end">لتر</Th>
-                  <Th className="text-end">المبلغ</Th>
-                  <Th className="text-end">سعر اللتر</Th>
                   <Th className="text-end">كم/لتر</Th>
                   <Th>الدفع</Th>
                   <Th>الحالة</Th>
@@ -262,7 +283,6 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
                 {fills.map((f) => {
                   const e = effById.get(f.id);
                   const st = EXPENSE_STATUS[f.status];
-                  const perLiter = pricePerLiter(f.amount_minor, Number(f.liters));
                   const editable = !f.settlement_id && (finance || (canWrite && f.status === "submitted"));
                   return (
                     <Tr key={f.id}>
@@ -273,13 +293,17 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
                         </Link>
                       </Td>
                       <Td className="whitespace-nowrap">{(f.driver as { full_name: string } | null)?.full_name ?? "—"}</Td>
-                      <Td className="num text-end">{formatInt(f.odometer)}</Td>
-                      <Td className="num text-end">
-                        {formatDecimal(Number(f.liters))}
+                      <Td className="whitespace-nowrap">{(f.station as { name: string } | null)?.name ?? "—"}</Td>
+                      <Td className="num text-end whitespace-nowrap">
+                        {formatQuantity(Number(f.quantity), f.qty_unit)}
                         {f.is_full_tank ? "" : <span className="ms-1 text-xs text-muted">جزئية</span>}
                       </Td>
-                      <Td className="num text-end whitespace-nowrap">{formatMoney(f.amount_minor, f.currency)}</Td>
-                      <Td className="num text-end whitespace-nowrap">{perLiter !== null ? formatMoney(perLiter, f.currency) : "—"}</Td>
+                      <Td className="num text-end whitespace-nowrap">{formatMoney(f.unit_price_minor, f.currency)}</Td>
+                      <Td className="num text-end whitespace-nowrap">
+                        {formatMoney(f.amount_base_minor, "JOD", { withCurrency: false })}
+                        {f.currency !== "JOD" ? <span className="block text-xs text-muted">{formatMoney(f.amount_minor, f.currency)}</span> : null}
+                      </Td>
+                      <Td className="num text-end">{formatInt(f.odometer)}</Td>
                       <Td className={`num text-end whitespace-nowrap ${e?.is_abnormal ? "font-semibold text-danger" : ""}`}>
                         {e?.km_per_liter != null ? formatDecimal(e.km_per_liter) : "—"}
                         {e?.is_abnormal ? <AlertTriangle className="ms-1 inline size-3.5" aria-label="استهلاك غير طبيعي" /> : null}

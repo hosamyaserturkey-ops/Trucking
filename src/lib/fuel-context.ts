@@ -9,7 +9,7 @@ export type FuelCheck = { kmPerLiter: number | null; baseline: number | null; ab
  * a reviewer sees a suspicious entry before approving it.
  */
 export async function loadFuelChecks(
-  fills: { id: string; truck_id: string; filled_at: string; odometer: number; liters: number; is_full_tank: boolean }[],
+  fills: { id: string; truck_id: string; filled_at: string; odometer: number; liters: number | null; is_full_tank: boolean }[],
 ): Promise<Map<string, FuelCheck>> {
   const out = new Map<string, FuelCheck>();
   if (fills.length === 0) return out;
@@ -44,7 +44,7 @@ export async function loadFuelChecks(
     ),
   );
   fills.forEach((f, i) => {
-    const kmPerLiter = impliedKmPerLiter(f, (histories[i].data ?? []).map((h) => ({ ...h, liters: Number(h.liters) })));
+    const kmPerLiter = impliedKmPerLiter(f, (histories[i].data ?? []).map((h) => ({ ...h, liters: h.liters === null ? null : Number(h.liters) })));
     const base = baseline.get(f.truck_id) ?? null;
     out.set(f.id, { kmPerLiter, baseline: base, abnormal: isAbnormal(kmPerLiter, base, threshold) });
   });

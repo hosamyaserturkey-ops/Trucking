@@ -38,17 +38,17 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 ## What's in Phase 3
 
 - **Diesel from the driver's phone (تعبئة ديزل):**
-  - The driver records odometer, liters, full tank or not, amount and station, with a **required receipt photo**. The price per liter shows as they type.
+  - The driver records odometer, full tank or not, the station, and how much: **by the liter (لتر), the gallon (قلن) or the tank (تنكة)**, the quantity and the price per unit. The cost (quantity × price per unit) shows as they type. A **receipt photo is required**.
   - The fill-up waits for approval and is paid from the driver's advance (عهدة).
   - It can be fixed or withdrawn until reviewed. **مصاريفي والديزل** lists both kinds with their status.
 - **Approvals:**
-  - A diesel section shows the receipt, odometer, liters and price per liter.
+  - A diesel section shows the receipt, odometer, quantity with its unit, and the price per unit.
   - It also shows **the km/L this fill-up implies against the truck's normal**, and flags it when it is far off.
-  - The accountant can correct liters, amount, odometer or full tank before approving, or reject with a reason.
+  - The accountant can correct the quantity, price per unit, odometer or full tank before approving (in the fill-up's own unit), or reject with a reason.
 - **Advances:** approved driver-paid diesel appears in the driver's ledger, the settlement preview and the A4 slip, and is settled with the expenses.
 - **Diesel log (الديزل):**
-  - Every fill-up with filters for date, truck, driver, status and abnormal only.
-  - Totals for liters, cost, km/L and price per liter, and trucks and drivers ranked by km/L.
+  - Every fill-up with date, truck, driver, station, quantity and unit, price per unit and cost in JOD. Filters for date, truck, driver, station, status and abnormal only.
+  - Totals for quantity per unit, cost, km/L and price per liter, and trucks and drivers ranked by km/L.
   - Office entry and editing. A dispatcher's entry goes to approval; the manager's or accountant's counts at once.
 - **Expenses (المصاريف):**
   - The office enters an expense for one truck (optionally a trip and driver) or as overhead shared across the fleet, with category, supplier, currency, payment, reference and an optional receipt.
@@ -56,6 +56,9 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - Expense categories are under master data (**أنواع المصاريف**).
 - **Fuel alerts:** abnormal approved fill-ups from the last 60 days show on the fleet board. The Truck 360 Diesel tab lists fill-ups not counted yet.
 - All receipts go through the R2 storage module. Diesel receipts open at `/files/fuel/<id>`.
+- **Diesel units:** a gallon (قلن) or a tank (تنكة) is a unit of its own with its own price, which depends on where it was bought. Its size in liters isn't known, so:
+  - km/L (and the abnormal check) is measured only between full tanks where every fill-up in between was in liters;
+  - the forms suggest the last price paid for that unit at the chosen station, and the user can change it.
 
 ## Daily loading sheet (كشف التحميل اليومي)
 
@@ -80,7 +83,8 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **Drivers see only their own rows** (RLS). Dispatchers can't see the journal, purchase values or financing.
 - **Driver expenses and fill-ups count only once approved**, and only the accountant or manager can approve. Settled advances, expenses and fill-ups can't be changed, and settlements can't be edited or deleted.
 - **A reviewed expense or fill-up can't be deleted**, and neither can its receipt. A wrong one is corrected or reversed with a new row.
-- **Fill-ups must be plausible:** liters no more than the truck's tank, and the odometer between the truck's earlier and later fill-ups.
+- **Fill-ups must be plausible:** liters no more than the truck's tank (for fill-ups in liters), and the odometer between the truck's earlier and later fill-ups.
+- **A fill-up's cost is always quantity × price per unit**; the database recomputes it on every write.
 
 ## Running it
 
@@ -209,10 +213,13 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   12. diesel approval and settlement, `driver_advance` payment, plausibility checks, fuel alerts
   13. reviewed expenses and fill-ups can't be deleted
   14. daily loading sheet: customer codes, per-customer reference numbers, sheet lines without odometer
+  15. customer invoicing: invoices, receipts (cash, bank, cheque, discount), customer statement and balances (screens to come)
+  16. diesel by the liter, gallon (قلن) or tank (تنكة): unit, quantity and price per unit
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
-  3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal.
+  3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal;
+  4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (local tests; not loaded on the live demo yet).
 - **Before go-live:**
   - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings.
   - Run `truncate audit.log;`.
