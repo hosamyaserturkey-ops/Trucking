@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
+.env
+coverage/
+test-results/
+.DS_Store
+
+# Cloudflare Workers build output and local secrets
+.open-next/
+.wrangler/
+.dev.vars*

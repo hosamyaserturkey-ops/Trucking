@@ -1,0 +1,25 @@
+// Cloudflare Workers hosting, built with the OpenNext adapter:
+//   npx opennextjs-cloudflare build   then   npx opennextjs-cloudflare deploy
+// Secrets (R2_*) are set in the Cloudflare dashboard, never here. See README → Hosting.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker's name in the Cloudflare dashboard.
+  "name": "trucking",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference the adapter uses internally; must match "name" above.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "trucking"
+    }
+  ],
+  // Keep variables set in the dashboard when deploying.
+  "keep_vars": true,
+  "observability": { "enabled": true }
+}

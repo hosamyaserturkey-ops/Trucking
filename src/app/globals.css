@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* Design tokens. Components use the Tailwind names below (bg-surface, text-muted, ...). */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f8fafb;
+  --border: #e2e7ec;
+  --text: #15202b;
+  --muted: #5d6b79;
+  --primary: #0d6b5c;
+  --primary-strong: #0a5549;
+  --primary-soft: #e3f2ef;
+  --on-primary: #ffffff;
+  --success: #1f7a4d;
+  --success-soft: #e4f4ea;
+  --warning: #9a6200;
+  --warning-soft: #fdf1dc;
+  --danger: #b4232f;
+  --danger-soft: #fbe6e8;
+  --info: #1d5fa8;
+  --info-soft: #e5eef9;
+  /* Chart series, validated with the dataviz palette checks (light surface #ffffff). */
+  --chart-revenue: #00866f;
+  --chart-cost: #c4612f;
+  --chart-profit: #2563b8;
+  --chart-grid: #e8ecef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1418;
+    --surface: #171e24;
+    --surface-2: #1c242b;
+    --border: #2a343d;
+    --text: #e6ecf1;
+    --muted: #93a1ae;
+    --primary: #3fb39d;
+    --primary-strong: #5cc6b1;
+    --primary-soft: #16302b;
+    --on-primary: #06201b;
+    --success: #5cc38a;
+    --success-soft: #16301f;
+    --warning: #e3a94a;
+    --warning-soft: #33280f;
+    --danger: #ef7b84;
+    --danger-soft: #3a1a1e;
+    --info: #7fb2ec;
+    --info-soft: #172739;
+    /* Dark steps validated against the dark surface #171e24. */
+    --chart-revenue: #1f9a83;
+    --chart-cost: #cc7044;
+    --chart-profit: #5596de;
+    --chart-grid: #26313a;
+  }
+}
+
+@theme inline {
+  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+/* Numbers, plates and codes keep left-to-right order inside RTL text. */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
