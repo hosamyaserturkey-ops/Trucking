@@ -57,6 +57,21 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **Fuel alerts:** abnormal approved fill-ups from the last 60 days show on the fleet board. The Truck 360 Diesel tab lists fill-ups not counted yet.
 - All receipts go through the R2 storage module. Diesel receipts open at `/files/fuel/<id>`.
 
+## Daily loading sheet (كشف التحميل اليومي)
+
+- **One line per load**, entered by hand, with no start/finish steps and no odometer readings. It's under الأسطول in the menu.
+- **Each line has:** date, truck (its driver is filled in), customer, from, to, cargo, weight in tons, freight in JOD or USD, and the customer's own document number (waybill or bill of lading).
+- **Internal reference number (رقم الإشارة):**
+  - Every load gets the next number in its customer's own series, e.g. `ARB-0001`, `ARB-0002`.
+  - The database assigns it when the line is saved; nobody types it.
+  - A deleted line's number is never given out again.
+  - If the customer is changed, the load takes the next number in the new customer's series.
+- **Customer code:** set **رمز الإشارة** on the customer under العملاء (2–6 Latin letters or digits, e.g. `ARB`). Customers without a code use `C<number>`, e.g. `C07-0001`. Changing a code affects new loads only; printed references stay valid.
+- **Freight counts as revenue:** a sheet line is stored as a finished trip, so it counts in truck profit, fleet totals and Truck 360.
+- **In the trips list,** sheet lines are marked **كشف**. Normal trips (plan, start and finish with odometer) still work as before.
+- **Totals and printing:** the sheet shows totals (loads, tons, freight) for a day or a period, filtered by truck or customer. It prints as an A4 landscape sheet with signature lines.
+- **Who can do what:** the manager and the dispatcher add, edit and delete lines; the accountant views.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -193,6 +208,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   11. file rules: path layout, a driver's own folder, receipts frozen once reviewed or settled
   12. diesel approval and settlement, `driver_advance` payment, plausibility checks, fuel alerts
   13. reviewed expenses and fill-ups can't be deleted
+  14. daily loading sheet: customer codes, per-customer reference numbers, sheet lines without odometer
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;

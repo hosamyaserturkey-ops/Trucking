@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { TRIP_WRITERS } from "@/lib/roles";
@@ -22,6 +22,7 @@ export default async function EditTripPage({ params }: { params: Promise<{ id: s
     loadTripOptions(),
   ]);
   if (!trip) notFound();
+  if (trip.entry_source === "sheet") redirect(`/loading/${id}/edit`);
 
   return (
     <>

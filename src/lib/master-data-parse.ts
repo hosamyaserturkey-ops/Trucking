@@ -71,6 +71,8 @@ export function parseEntityForm(fields: FieldDef[], get: (name: string) => strin
 
 /** Map a Postgres/PostgREST error to a message for the user. */
 export function describeDbError(error: { code?: string; message: string }): string {
+  if (error.message.includes("clients_ref_code_format")) return "رمز الإشارة يجب أن يكون من 2 إلى 6 أحرف إنجليزية أو أرقام";
+  if (error.message.includes("clients_ref_code_key")) return "رمز الإشارة مستخدم لزبون آخر";
   switch (error.code) {
     case "23505":
       return "هذه القيمة مستخدمة مسبقاً (يجب أن تكون فريدة)";

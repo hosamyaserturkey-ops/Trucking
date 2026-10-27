@@ -34,7 +34,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
     supabase.from("trip_profit_v").select("*").eq("trip_id", id).maybeSingle(),
     supabase
       .from("trips")
-      .select("start_odometer, end_odometer, cargo_weight_tons, fx_rate, notes, truck:trucks(code, plate_number)")
+      .select("start_odometer, end_odometer, cargo_weight_tons, fx_rate, notes, entry_source, client_ref, client_doc_no, truck:trucks(code, plate_number)")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("fuel_fillups").select("id, filled_at, odometer, liters, is_full_tank, amount_base_minor").eq("trip_id", id).order("filled_at"),
@@ -70,6 +70,12 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             الرحلة <span className="num">{trip.trip_no}</span>
             <Badge tone={st.tone}>{st.label}</Badge>
             {trip.is_empty_return ? <Badge>عودة فارغة</Badge> : null}
+            {raw.entry_source === "sheet" ? <Badge tone="info">كشف التحميل</Badge> : null}
+            {raw.client_ref ? (
+              <span className="num text-base font-medium text-muted" dir="ltr">
+                {raw.client_ref}
+              </span>
+            ) : null}
           </span>
         }
         subtitle={
@@ -84,14 +90,14 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
         action={
           canWrite ? (
             <div className="flex flex-wrap gap-2">
-              {trip.status === "completed" || trip.status === "in_progress" ? (
+              {raw.entry_source !== "sheet" && (trip.status === "completed" || trip.status === "in_progress") ? (
                 <LinkButton href={`/trips/new?return_of=${id}`}>
                   <CornerUpLeft className="size-4" aria-hidden />
                   رحلة العودة
                 </LinkButton>
               ) : null}
               {trip.status !== "cancelled" ? (
-                <LinkButton href={`/trips/${id}/edit`}>
+                <LinkButton href={raw.entry_source === "sheet" ? `/loading/${id}/edit` : `/trips/${id}/edit`}>
                   <Pencil className="size-4" aria-hidden />
                   تعديل
                 </LinkButton>
