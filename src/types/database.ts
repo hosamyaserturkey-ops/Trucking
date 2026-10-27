@@ -58,6 +58,78 @@ export type Database = {
           },
         ]
       }
+      client_receipts: {
+        Row: {
+          amount_minor: number
+          cheque_bank: string | null
+          cheque_due_date: string | null
+          cheque_no: string | null
+          cheque_status: string | null
+          cheque_status_on: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string
+          notes: string | null
+          receipt_no: number
+          received_on: string
+          reference_no: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          cheque_bank?: string | null
+          cheque_due_date?: string | null
+          cheque_no?: string | null
+          cheque_status?: string | null
+          cheque_status_on?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method: string
+          notes?: string | null
+          receipt_no?: never
+          received_on: string
+          reference_no?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          cheque_bank?: string | null
+          cheque_due_date?: string | null
+          cheque_no?: string | null
+          cheque_status?: string | null
+          cheque_status_on?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          receipt_no?: never
+          received_on?: string
+          reference_no?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_receipts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_receipts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -77,6 +149,7 @@ export type Database = {
           ref_code: string | null
           tax_number: string | null
           updated_at: string
+          vat_exempt: boolean
         }
         Insert: {
           address?: string | null
@@ -96,6 +169,7 @@ export type Database = {
           ref_code?: string | null
           tax_number?: string | null
           updated_at?: string
+          vat_exempt?: boolean
         }
         Update: {
           address?: string | null
@@ -115,6 +189,7 @@ export type Database = {
           ref_code?: string | null
           tax_number?: string | null
           updated_at?: string
+          vat_exempt?: boolean
         }
         Relationships: [
           {
@@ -128,31 +203,43 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          address: string | null
           base_currency: string
           company_name: string
           fuel_anomaly_threshold_pct: number
           id: boolean
           overhead_allocation: string
+          phone: string | null
+          tax_number: string | null
           timezone: string
           updated_at: string
+          vat_rate_pct: number
         }
         Insert: {
+          address?: string | null
           base_currency?: string
           company_name?: string
           fuel_anomaly_threshold_pct?: number
           id?: boolean
           overhead_allocation?: string
+          phone?: string | null
+          tax_number?: string | null
           timezone?: string
           updated_at?: string
+          vat_rate_pct?: number
         }
         Update: {
+          address?: string | null
           base_currency?: string
           company_name?: string
           fuel_anomaly_threshold_pct?: number
           id?: boolean
           overhead_allocation?: string
+          phone?: string | null
+          tax_number?: string | null
           timezone?: string
           updated_at?: string
+          vat_rate_pct?: number
         }
         Relationships: [
           {
@@ -680,10 +767,12 @@ export type Database = {
           fx_rate: number
           id: string
           is_full_tank: boolean
-          liters: number
+          liters: number | null
           notes: string | null
           odometer: number
           payment_method: string
+          qty_unit: string
+          quantity: number
           receipt_path: string | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -694,6 +783,7 @@ export type Database = {
           submitted_by: string | null
           trip_id: string | null
           truck_id: string
+          unit_price_minor: number
           updated_at: string
         }
         Insert: {
@@ -707,10 +797,12 @@ export type Database = {
           fx_rate?: number
           id?: string
           is_full_tank?: boolean
-          liters: number
+          liters?: number | null
           notes?: string | null
           odometer: number
           payment_method?: string
+          qty_unit?: string
+          quantity: number
           receipt_path?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -721,6 +813,7 @@ export type Database = {
           submitted_by?: string | null
           trip_id?: string | null
           truck_id: string
+          unit_price_minor: number
           updated_at?: string
         }
         Update: {
@@ -734,10 +827,12 @@ export type Database = {
           fx_rate?: number
           id?: string
           is_full_tank?: boolean
-          liters?: number
+          liters?: number | null
           notes?: string | null
           odometer?: number
           payment_method?: string
+          qty_unit?: string
+          quantity?: number
           receipt_path?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -748,6 +843,7 @@ export type Database = {
           submitted_by?: string | null
           trip_id?: string | null
           truck_id?: string
+          unit_price_minor?: number
           updated_at?: string
         }
         Relationships: [
@@ -819,6 +915,177 @@ export type Database = {
             columns: ["truck_id"]
             isOneToOne: false
             referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_lines: {
+        Row: {
+          amount_minor: number
+          cargo_description: string | null
+          cargo_weight_tons: number | null
+          client_doc_no: string | null
+          client_ref: string | null
+          currency: string
+          freight_minor: number
+          fx_rate: number
+          id: string
+          invoice_id: string
+          line_no: number
+          load_date: string
+          route: string | null
+          trip_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          cargo_description?: string | null
+          cargo_weight_tons?: number | null
+          client_doc_no?: string | null
+          client_ref?: string | null
+          currency: string
+          freight_minor: number
+          fx_rate: number
+          id?: string
+          invoice_id: string
+          line_no: number
+          load_date: string
+          route?: string | null
+          trip_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          cargo_description?: string | null
+          cargo_weight_tons?: number | null
+          client_doc_no?: string | null
+          client_ref?: string | null
+          currency?: string
+          freight_minor?: number
+          fx_rate?: number
+          id?: string
+          invoice_id?: string
+          line_no?: number
+          load_date?: string
+          route?: string | null
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_lines_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trip_profit_v"
+            referencedColumns: ["trip_id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["current_trip_id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_no: number
+          lines_count: number
+          notes: string | null
+          period_from: string
+          period_to: string
+          status: string
+          subtotal_minor: number
+          total_minor: number
+          updated_at: string
+          vat_minor: number
+          vat_rate_pct: number
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          invoice_date: string
+          invoice_no?: never
+          lines_count: number
+          notes?: string | null
+          period_from: string
+          period_to: string
+          status?: string
+          subtotal_minor: number
+          total_minor: number
+          updated_at?: string
+          vat_minor: number
+          vat_rate_pct: number
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          invoice_date?: string
+          invoice_no?: never
+          lines_count?: number
+          notes?: string | null
+          period_from?: string
+          period_to?: string
+          status?: string
+          subtotal_minor?: number
+          total_minor?: number
+          updated_at?: string
+          vat_minor?: number
+          vat_rate_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1263,6 +1530,7 @@ export type Database = {
           from_location_id: string | null
           fx_rate: number
           id: string
+          invoice_id: string | null
           is_empty_return: boolean
           notes: string | null
           start_date: string
@@ -1293,6 +1561,7 @@ export type Database = {
           from_location_id?: string | null
           fx_rate?: number
           id?: string
+          invoice_id?: string | null
           is_empty_return?: boolean
           notes?: string | null
           start_date: string
@@ -1323,6 +1592,7 @@ export type Database = {
           from_location_id?: string | null
           fx_rate?: number
           id?: string
+          invoice_id?: string | null
           is_empty_return?: boolean
           notes?: string | null
           start_date?: string
@@ -1334,6 +1604,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trips_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
           {
             foreignKeyName: "trips_client_id_fkey"
             columns: ["client_id"]
@@ -1367,6 +1644,13 @@ export type Database = {
             columns: ["from_location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -1780,6 +2064,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_balance_v: {
+        Row: {
+          balance_minor: number | null
+          cheques_pending_minor: number | null
+          client_id: string | null
+          invoiced_minor: number | null
+          is_active: boolean | null
+          last_invoice: string | null
+          last_receipt: string | null
+          name: string | null
+          overdue_minor: number | null
+          received_minor: number | null
+          ref_code: string | null
+          unbilled_loads: number | null
+          unbilled_minor: number | null
+        }
+        Relationships: []
+      }
+      client_statement_v: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          credit_minor: number | null
+          debit_minor: number | null
+          doc_id: string | null
+          doc_no: number | null
+          entry_date: string | null
+          kind: string | null
+          kind_order: number | null
+          lines_count: number | null
+          method: string | null
+          period_from: string | null
+          period_to: string | null
+        }
+        Relationships: []
+      }
       document_expiry_v: {
         Row: {
           created_at: string | null
@@ -1918,10 +2238,13 @@ export type Database = {
           odometer: number | null
           payment_method: string | null
           price_per_liter_base_minor: number | null
+          qty_unit: string | null
+          quantity: number | null
           receipt_path: string | null
           station_id: string | null
           trip_id: string | null
           truck_id: string | null
+          unit_price_minor: number | null
         }
         Relationships: [
           {
@@ -2103,6 +2426,13 @@ export type Database = {
             foreignKeyName: "trips_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "trips_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -2177,6 +2507,19 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_invoice: {
+        Args: { p_invoice_id: string; p_reason: string }
+        Returns: undefined
+      }
+      create_invoice: {
+        Args: {
+          p_client_id: string
+          p_invoice_date: string
+          p_notes?: string
+          p_trip_ids: string[]
+        }
+        Returns: string
+      }
       driver_trip_action: {
         Args: { p_action: string; p_odometer: number; p_trip_id: string }
         Returns: string

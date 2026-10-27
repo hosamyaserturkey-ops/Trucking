@@ -6,6 +6,7 @@ import { FUEL_WRITERS } from "@/lib/roles";
 import { todayIso } from "@/lib/date-range";
 import { nowTime } from "@/lib/fuel";
 import { loadOfficeOptions } from "@/lib/office-options";
+import { loadLastFuelPrices } from "@/lib/fuel-prices";
 import { saveOfficeFillup } from "../actions";
 import { Card, CardBody, PageHeader } from "@/components/ui/card";
 import { OfficeFillupForm } from "@/components/office-fillup-form";
@@ -15,7 +16,7 @@ export const metadata: Metadata = { title: "تعبئة ديزل" };
 export default async function NewFillupPage({ searchParams }: { searchParams: Promise<{ truck?: string }> }) {
   const profile = await requireRole(...FUEL_WRITERS);
   const { truck } = await searchParams;
-  const options = await loadOfficeOptions();
+  const [options, lastPrices] = await Promise.all([loadOfficeOptions(), loadLastFuelPrices()]);
   const t = options.trucks.find((x) => x.id === truck);
 
   return (
@@ -29,6 +30,7 @@ export default async function NewFillupPage({ searchParams }: { searchParams: Pr
         <CardBody>
           <OfficeFillupForm
             options={options}
+            lastPrices={lastPrices}
             today={todayIso()}
             time={nowTime()}
             initial={t ? { truck_id: t.id, driver_id: t.driverId } : {}}

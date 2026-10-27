@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { truckPage, type TruckPageProps } from "@/lib/truck";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDateTime, formatDecimal, formatInt } from "@/lib/format";
+import { formatQuantity, quantitySummary } from "@/lib/fuel";
 import { EXPENSE_STATUS, PAYMENT_METHOD } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export default async function TruckDieselPage(props: TruckPageProps) {
     // Fill-ups still waiting or rejected do not count yet; list them separately.
     supabase
       .from("fuel_fillups")
-      .select("id, filled_at, odometer, liters, currency, amount_minor, status, rejection_reason, driver:drivers(full_name)")
+      .select("id, filled_at, odometer, qty_unit, quantity, unit_price_minor, currency, amount_minor, status, rejection_reason, station_id, driver:drivers(full_name)")
       .eq("truck_id", id)
       .neq("status", "approved")
       .order("filled_at", { ascending: false })
@@ -41,7 +42,9 @@ export default async function TruckDieselPage(props: TruckPageProps) {
   const stations = new Map((stationsRes.data ?? []).map((s) => [s.id, s.name]));
   const threshold = settingsRes.data?.fuel_anomaly_threshold_pct ?? 15;
 
-  const liters = rows.reduce((s, r) => s + (r.liters ?? 0), 0);
+  const literRows = rows.filter((r) => r.qty_unit === "liter");
+  const liters = literRows.reduce((s, r) => s + Number(r.quantity ?? 0), 0);
+  const litersCost = sumMinor(literRows.map((r) => r.amount_base_minor));
   const cost = sumMinor(rows.map((r) => r.amount_base_minor));
   const measured = rows.filter((r) => r.km_per_liter && r.km_since_last_full);
   const km = measured.reduce((s, r) => s + (r.km_since_last_full ?? 0), 0);
@@ -53,8 +56,8 @@ export default async function TruckDieselPage(props: TruckPageProps) {
   return (
     <>
       <StatGrid>
-        <Stat label="اللترات" value={formatInt(liters)} hint={`${formatInt(rows.length)} تعبئة`} />
-        <Stat label="التكلفة" value={formatMoney(cost)} hint={liters ? `${formatMoney(Math.round(cost / liters))} للتر` : undefined} />
+        <Stat label="الكمية" value={quantitySummary(rows, 0) || "—"} hint={`${formatInt(rows.length)} تعبئة`} />
+        <Stat label="التكلفة" value={formatMoney(cost)} hint={liters ? `${formatMoney(Math.round(litersCost / liters))} للتر` : undefined} />
         <Stat
           label="معدل الاستهلاك"
           value={avg ? `${formatDecimal(avg)} كم/لتر` : "—"}
@@ -76,9 +79,11 @@ export default async function TruckDieselPage(props: TruckPageProps) {
               <tr>
                 <Th>الوقت</Th>
                 <Th>السائق</Th>
+                <Th>المحطة</Th>
                 <Th className="text-end">العداد</Th>
-                <Th className="text-end">لتر</Th>
-                <Th className="text-end">المبلغ</Th>
+                <Th className="text-end">الكمية</Th>
+                <Th className="text-end">سعر الوحدة</Th>
+                <Th className="text-end">الكلفة</Th>
                 <Th>الحالة</Th>
               </tr>
             </thead>
@@ -89,8 +94,10 @@ export default async function TruckDieselPage(props: TruckPageProps) {
                   <Tr key={f.id}>
                     <Td className="num whitespace-nowrap">{formatDateTime(f.filled_at)}</Td>
                     <Td className="whitespace-nowrap">{(f.driver as { full_name: string } | null)?.full_name ?? "—"}</Td>
+                    <Td className="whitespace-nowrap">{(f.station_id && stations.get(f.station_id)) ?? "—"}</Td>
                     <Td className="num text-end">{formatInt(f.odometer)}</Td>
-                    <Td className="num text-end">{formatDecimal(Number(f.liters))}</Td>
+                    <Td className="num text-end whitespace-nowrap">{formatQuantity(Number(f.quantity), f.qty_unit)}</Td>
+                    <Td className="num text-end whitespace-nowrap">{formatMoney(f.unit_price_minor, f.currency)}</Td>
                     <Td className="num text-end whitespace-nowrap">{formatMoney(f.amount_minor, f.currency)}</Td>
                     <Td>
                       <Badge tone={st.tone}>{st.label}</Badge>
@@ -107,7 +114,7 @@ export default async function TruckDieselPage(props: TruckPageProps) {
       <Card>
         <CardHeader
           title="سجل التعبئة"
-          subtitle="يُحسب كم/لتر بين تعبئتين كاملتين، ويشمل كل اللترات المعبأة بينهما"
+          subtitle="يُحسب كم/لتر بين تعبئتين كاملتين، ويشمل كل اللترات المعبأة بينهما؛ لا يُحسب إذا كان بينهما تعبئة بالقلن أو التنكة"
           action={
             FUEL_WRITERS.includes(profile.role) ? (
               <LinkButton href={`/diesel/new?truck=${id}`} variant="secondary">
@@ -126,10 +133,10 @@ export default async function TruckDieselPage(props: TruckPageProps) {
                 <Th>التاريخ</Th>
                 <Th>المحطة</Th>
                 <Th className="text-end">العداد</Th>
-                <Th className="text-end">لتر</Th>
+                <Th className="text-end">الكمية</Th>
                 <Th>نوع التعبئة</Th>
-                <Th className="text-end">المبلغ</Th>
-                <Th className="text-end">سعر اللتر</Th>
+                <Th className="text-end">سعر الوحدة</Th>
+                <Th className="text-end">الكلفة</Th>
                 <Th className="text-end">كم منذ آخر تعبئة كاملة</Th>
                 <Th className="text-end">كم/لتر</Th>
                 <Th>الدفع</Th>
@@ -141,15 +148,15 @@ export default async function TruckDieselPage(props: TruckPageProps) {
                   <Td className="num whitespace-nowrap">{formatDateTime(r.filled_at)}</Td>
                   <Td className="whitespace-nowrap">{(r.station_id && stations.get(r.station_id)) ?? "—"}</Td>
                   <Td className="num text-end">{formatInt(r.odometer)}</Td>
-                  <Td className="num text-end">{formatDecimal(r.liters)}</Td>
+                  <Td className="num whitespace-nowrap text-end">{formatQuantity(r.quantity, r.qty_unit)}</Td>
                   <Td>{r.is_full_tank ? "كاملة" : <Badge>جزئية</Badge>}</Td>
+                  <Td className="num whitespace-nowrap text-end">{formatMoney(r.unit_price_minor, r.currency ?? "JOD")}</Td>
                   <Td className="num whitespace-nowrap text-end">
                     {formatMoney(r.amount_minor, r.currency ?? "JOD")}
                     {r.currency && r.currency !== "JOD" ? (
                       <span className="block text-xs text-muted">{formatMoney(r.amount_base_minor)}</span>
                     ) : null}
                   </Td>
-                  <Td className="num text-end">{formatMoney(r.price_per_liter_base_minor, "JOD", { withCurrency: false })}</Td>
                   <Td className="num text-end">{formatInt(r.km_since_last_full)}</Td>
                   <Td className="num whitespace-nowrap text-end">
                     {r.is_abnormal ? (

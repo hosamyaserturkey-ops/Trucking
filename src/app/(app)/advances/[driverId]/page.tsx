@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { openLedger } from "@/lib/advances";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatDecimal, formatInt } from "@/lib/format";
+import { formatDate, formatInt } from "@/lib/format";
+import { formatQuantity } from "@/lib/fuel";
 import { issueAdvance, settleDriver } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton, buttonClass } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export default async function DriverAdvancePage({
     // Diesel the driver paid from the advance, approved and not settled yet.
     supabase
       .from("fuel_fillups")
-      .select("id, filled_at, liters, odometer, currency, amount_minor, amount_base_minor, trip:trips(id, trip_no)")
+      .select("id, filled_at, qty_unit, quantity, odometer, currency, amount_minor, amount_base_minor, trip:trips(id, trip_no)")
       .eq("driver_id", driverId)
       .is("settlement_id", null)
       .eq("status", "approved")
@@ -108,7 +109,7 @@ export default async function DriverAdvancePage({
       // Same date rule as settle_driver_advance: the fill-up's day in Amman.
       date: todayIso(new Date(f.filled_at)),
       base_minor: f.amount_base_minor,
-      label: `ديزل · ${formatDecimal(Number(f.liters))} لتر · العداد ${formatInt(f.odometer)}`,
+      label: `ديزل · ${formatQuantity(Number(f.quantity), f.qty_unit)} · العداد ${formatInt(f.odometer)}`,
       currency: f.currency,
       amount_minor: f.amount_minor,
       trip: f.trip as TripRef,

@@ -4,7 +4,8 @@ import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
-import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
+import { formatDate, formatDateTime, formatInt } from "@/lib/format";
+import { formatQuantity } from "@/lib/fuel";
 import { PrintButton } from "@/components/print-button";
 
 export const metadata: Metadata = { title: "سند تسوية عهدة" };
@@ -39,7 +40,7 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
       .order("expense_date"),
     supabase
       .from("fuel_fillups")
-      .select("id, filled_at, liters, odometer, currency, amount_minor, amount_base_minor, trip:trips(trip_no), truck:trucks(code)")
+      .select("id, filled_at, qty_unit, quantity, odometer, currency, amount_minor, amount_base_minor, trip:trips(trip_no), truck:trucks(code), station:suppliers(name)")
       .eq("settlement_id", id)
       .order("filled_at"),
   ]);
@@ -181,7 +182,7 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
             <thead>
               <tr className="bg-surface-2">
                 <th className={`${CELL} text-start`}>الوقت</th>
-                <th className={`${CELL} text-start`}>اللترات والعداد</th>
+                <th className={`${CELL} text-start`}>الكمية والمحطة والعداد</th>
                 <th className={`${CELL} text-start`}>الشاحنة / الرحلة</th>
                 <th className={`${CELL} text-end`}>بالعملة الأصلية</th>
                 <th className={`${CELL} text-end`}>بالدينار</th>
@@ -195,7 +196,9 @@ export default async function SettlementSlipPage({ params }: { params: Promise<{
                   <tr key={f.id}>
                     <td className={`num ${CELL} whitespace-nowrap`}>{formatDateTime(f.filled_at)}</td>
                     <td className={CELL}>
-                      <span className="num">{formatDecimal(Number(f.liters))}</span> لتر · العداد <span className="num">{formatInt(f.odometer)}</span>
+                      <span className="num">{formatQuantity(Number(f.quantity), f.qty_unit)}</span>
+                      {(f.station as { name: string } | null)?.name ? ` · ${(f.station as { name: string }).name}` : ""} · العداد{" "}
+                      <span className="num">{formatInt(f.odometer)}</span>
                     </td>
                     <td className={`num ${CELL} whitespace-nowrap`}>
                       {truck ?? "—"}

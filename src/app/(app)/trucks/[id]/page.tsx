@@ -6,6 +6,7 @@ import { truckPage, tripInRange, type TruckPageProps } from "@/lib/truck";
 import { perUnit, pnlTotals } from "@/lib/pnl";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDecimal, formatInt } from "@/lib/format";
+import { quantitySummary } from "@/lib/fuel";
 import { COST_KINDS, DOC_TYPE, EXPIRY_BAND, PNL_KIND, SERVICE_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
@@ -26,7 +27,7 @@ export default async function TruckOverviewPage(props: TruckPageProps) {
       .or(tripInRange(range)),
     supabase
       .from("fuel_efficiency_v")
-      .select("liters, km_since_last_full, km_per_liter, is_abnormal")
+      .select("qty_unit, quantity, km_since_last_full, km_per_liter, is_abnormal")
       .eq("truck_id", id)
       .gte("filled_on", range.from)
       .lt("filled_on", range.to),
@@ -51,7 +52,6 @@ export default async function TruckOverviewPage(props: TruckPageProps) {
   const km = trips.reduce((s, t) => s + Math.max(t.distance_km ?? 0, 0), 0);
   const loadedTrips = trips.filter((t) => !t.is_empty_return).length;
   const emptyTrips = trips.length - loadedTrips;
-  const liters = fuel.reduce((s, f) => s + (f.liters ?? 0), 0);
   // Weighted km/L over measured segments: total km / total liters in those segments.
   const measured = fuel.filter((f) => f.km_per_liter && f.km_since_last_full);
   const measuredKm = measured.reduce((s, f) => s + (f.km_since_last_full ?? 0), 0);
@@ -117,7 +117,7 @@ export default async function TruckOverviewPage(props: TruckPageProps) {
           hint={`${formatInt(loadedTrips)} محملة · ${formatInt(emptyTrips)} عودة فارغة`}
         />
         <Stat label="المسافة" value={`${formatInt(km)} كم`} />
-        <Stat label="الديزل" value={`${formatInt(liters)} لتر`} />
+        <Stat label="الديزل" value={quantitySummary(fuel, 0) || "—"} />
         <Stat
           label="معدل الاستهلاك"
           value={avgKmpl ? `${formatDecimal(avgKmpl)} كم/لتر` : "—"}

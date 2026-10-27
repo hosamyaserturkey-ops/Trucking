@@ -74,17 +74,17 @@ export async function rejectExpense(id: string, _prev: ReviewState, formData: Fo
   return { error: null, done: "rejected" };
 }
 
-/** Approve a driver's or dispatcher's fill-up, after optionally fixing liters, amount, odometer or full tank. */
+/** Approve a driver's or dispatcher's fill-up, after optionally fixing the quantity, unit price, odometer or full tank. */
 export async function approveFillup(id: string, _prev: ReviewState, formData: FormData): Promise<ReviewState> {
   await requireRole(...FINANCE_ROLES);
   const supabase = await createClient();
-  const { data: fill } = await supabase.from("fuel_fillups").select("currency, status").eq("id", id).maybeSingle();
+  const { data: fill } = await supabase.from("fuel_fillups").select("currency, status, qty_unit").eq("id", id).maybeSingle();
   if (!fill) return { error: "التعبئة غير موجودة" };
   if (fill.status !== "submitted") return { error: "تمت مراجعة هذه التعبئة مسبقاً" };
-  const parsed = parseFuelApproval(fromForm(formData), fill.currency);
+  const parsed = parseFuelApproval(fromForm(formData), fill.currency, fill.qty_unit);
   if (!parsed.ok) return { error: parsed.error };
 
-  // The database re-checks tank size and odometer order, and stamps the reviewer.
+  // The database recomputes the cost, re-checks tank size and odometer order, and stamps the reviewer.
   const { data, error } = await supabase
     .from("fuel_fillups")
     .update({ ...parsed.values, status: "approved" })

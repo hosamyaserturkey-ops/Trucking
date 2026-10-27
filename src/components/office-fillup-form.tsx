@@ -3,11 +3,10 @@
 import { useState } from "react";
 import type { FillupFormState } from "@/app/(app)/diesel/actions";
 import type { OfficeOptions } from "@/lib/office-options";
-import { formatMoney, parseMoney } from "@/lib/money";
-import { pricePerLiter } from "@/lib/fuel";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
+import { FuelQuantityFields, type FuelQuantityInitial, type LastFuelPrices } from "@/components/fuel-quantity-fields";
 
 const PAYMENTS: [string, string][] = [
   ["cash", "نقداً"],
@@ -16,19 +15,15 @@ const PAYMENTS: [string, string][] = [
   ["driver_advance", "دفعها السائق من العهدة"],
 ];
 
-export type FillupInitial = {
+export type FillupInitial = FuelQuantityInitial & {
   truck_id?: string;
   driver_id?: string | null;
   trip_id?: string | null;
-  station_id?: string | null;
   filled_on?: string;
   filled_time?: string;
   odometer?: string;
-  liters?: string;
   is_full_tank?: boolean;
-  currency?: string;
   fx_rate?: string;
-  amount?: string;
   payment_method?: string;
   notes?: string | null;
   hasReceipt?: boolean;
@@ -38,6 +33,7 @@ export type FillupInitial = {
 export function OfficeFillupForm({
   recordId,
   options,
+  lastPrices,
   today,
   time,
   initial = {},
@@ -47,6 +43,7 @@ export function OfficeFillupForm({
 }: {
   recordId?: string;
   options: Pick<OfficeOptions, "trucks" | "drivers" | "trips" | "stations" | "rates">;
+  lastPrices: LastFuelPrices;
   today: string;
   time: string;
   initial?: FillupInitial;
@@ -59,14 +56,9 @@ export function OfficeFillupForm({
   const [driverId, setDriverId] = useState(initial.driver_id ?? "");
   const [currency, setCurrency] = useState(initial.currency ?? "JOD");
   const [fxRate, setFxRate] = useState(initial.fx_rate ?? options.rates[initial.currency ?? "JOD"] ?? "1");
-  const [amount, setAmount] = useState(initial.amount ?? "");
-  const [liters, setLiters] = useState(initial.liters ?? "");
 
   const truck = options.trucks.find((t) => t.id === truckId);
   const trips = options.trips.filter((t) => t.truckId === truckId);
-  const amountMinor = parseMoney(amount, currency);
-  const litersNum = Number(liters.replace(/,/g, ""));
-  const perLiter = amountMinor !== null && litersNum > 0 ? pricePerLiter(Number(amountMinor), litersNum) : null;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -111,16 +103,6 @@ export function OfficeFillupForm({
             ))}
           </Select>
         </Field>
-        <Field label="المحطة" htmlFor="station_id">
-          <Select id="station_id" name="station_id" defaultValue={initial.station_id ?? ""}>
-            <option value="">—</option>
-            {options.stations.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="التاريخ" htmlFor="filled_on">
             <Input id="filled_on" name="filled_on" type="date" dir="ltr" max={today} defaultValue={initial.filled_on ?? today} required />
@@ -136,33 +118,20 @@ export function OfficeFillupForm({
         >
           <Input id="odometer" name="odometer" inputMode="numeric" dir="ltr" defaultValue={initial.odometer ?? ""} required />
         </Field>
-        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-          <Field label={<>اللترات <span className="text-danger">*</span></>} htmlFor="liters">
-            <Input id="liters" name="liters" inputMode="decimal" dir="ltr" value={liters} onChange={(e) => setLiters(e.target.value)} required />
-          </Field>
-          <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
-            <input type="checkbox" name="is_full_tank" defaultChecked={initial.is_full_tank ?? true} className="size-4" />
-            تعبئة كاملة
-          </label>
-        </div>
-        <div className="grid grid-cols-[1fr_auto] gap-3">
-          <Field label={<>المبلغ <span className="text-danger">*</span></>} htmlFor="amount" hint={perLiter !== null ? `سعر اللتر ${formatMoney(perLiter, currency)}` : undefined}>
-            <Input id="amount" name="amount" inputMode="decimal" dir="ltr" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-          </Field>
-          <Field label="العملة" htmlFor="currency">
-            <Select
-              id="currency"
-              name="currency"
-              value={currency}
-              onChange={(e) => {
-                setCurrency(e.target.value);
-                setFxRate(options.rates[e.target.value] ?? "1");
-              }}
-            >
-              <option value="JOD">دينار</option>
-              <option value="USD">دولار</option>
-            </Select>
-          </Field>
+        <label className="flex items-center gap-2 self-end pb-2.5 text-sm font-medium">
+          <input type="checkbox" name="is_full_tank" defaultChecked={initial.is_full_tank ?? true} className="size-4" />
+          تعبئة كاملة (فل)
+        </label>
+        <div className="flex flex-col gap-4 rounded-xl border border-border p-4 sm:col-span-2">
+          <FuelQuantityFields
+            stations={options.stations}
+            lastPrices={lastPrices}
+            initial={initial}
+            onCurrencyChange={(c) => {
+              setCurrency(c);
+              setFxRate(options.rates[c] ?? "1");
+            }}
+          />
         </div>
         {currency !== "JOD" ? (
           <Field label="سعر الصرف إلى الدينار" htmlFor="fx_rate">

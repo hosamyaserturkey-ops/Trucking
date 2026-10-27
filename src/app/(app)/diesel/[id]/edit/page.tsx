@@ -10,6 +10,7 @@ import { nowTime } from "@/lib/fuel";
 import { formatMoney } from "@/lib/money";
 import { EXPENSE_STATUS } from "@/lib/labels";
 import { loadOfficeOptions } from "@/lib/office-options";
+import { loadLastFuelPrices } from "@/lib/fuel-prices";
 import { deleteOfficeFillup, saveOfficeFillup } from "../../actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, EmptyState, PageHeader } from "@/components/ui/card";
@@ -27,7 +28,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: f } = await supabase
     .from("fuel_fillups")
-    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, liters, is_full_tank, currency, fx_rate, amount_minor, payment_method, notes, receipt_path, status, settlement_id, reviewed_at")
+    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, fx_rate, payment_method, notes, receipt_path, status, settlement_id, reviewed_at")
     .eq("id", id)
     .maybeSingle();
   if (!f) notFound();
@@ -51,6 +52,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
             <OfficeFillupForm
               recordId={f.id}
               options={await loadOfficeOptions()}
+              lastPrices={await loadLastFuelPrices()}
               today={todayIso()}
               time={nowTime()}
               initial={{
@@ -61,11 +63,12 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
                 filled_on: todayIso(at),
                 filled_time: nowTime(at),
                 odometer: String(f.odometer),
-                liters: String(f.liters),
+                qty_unit: f.qty_unit,
+                quantity: String(f.quantity),
+                unit_price: formatMoney(f.unit_price_minor, f.currency, { withCurrency: false }),
                 is_full_tank: f.is_full_tank,
                 currency: f.currency,
                 fx_rate: String(f.fx_rate),
-                amount: formatMoney(f.amount_minor, f.currency, { withCurrency: false }),
                 payment_method: f.payment_method,
                 notes: f.notes,
                 hasReceipt: Boolean(f.receipt_path),

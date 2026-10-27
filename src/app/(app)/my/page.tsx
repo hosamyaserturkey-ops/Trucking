@@ -5,7 +5,8 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { todayIso } from "@/lib/date-range";
-import { formatDate, formatDecimal, formatInt } from "@/lib/format";
+import { formatDate, formatInt } from "@/lib/format";
+import { formatQuantity } from "@/lib/fuel";
 import { EXPENSE_STATUS, PAYMENT_METHOD, TRIP_STATUS } from "@/lib/labels";
 import { deleteDriverExpense, deleteDriverFillup, driverTripAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +50,7 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
     supabase
       .from("fuel_fillups")
       .select(
-        "id, filled_at, odometer, liters, is_full_tank, currency, amount_minor, payment_method, status, rejection_reason, receipt_path, settlement_id, trip:trips(trip_no)",
+        "id, filled_at, odometer, qty_unit, quantity, is_full_tank, currency, amount_minor, payment_method, status, rejection_reason, receipt_path, settlement_id, trip:trips(trip_no)",
       )
       .order("filled_at", { ascending: false })
       .limit(20),
@@ -126,7 +127,7 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
       return {
         key: `f-${f.id}`,
         sortAt: f.filled_at,
-        title: `ديزل · ${formatDecimal(f.liters)} لتر`,
+        title: `ديزل · ${formatQuantity(f.quantity, f.qty_unit)}`,
         date: todayIso(new Date(f.filled_at)),
         tripNo: (f.trip as { trip_no: number } | null)?.trip_no ?? null,
         detail: `العداد ${formatInt(f.odometer)}${f.is_full_tank ? "" : " · تعبئة جزئية"}`,

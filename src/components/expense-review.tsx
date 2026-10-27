@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 import type { ReviewState } from "@/app/(app)/approvals/actions";
 import { Button } from "@/components/ui/button";
 import { FormError, Input, Select } from "@/components/ui/form";
+import { FUEL_UNITS, isFuelUnit } from "@/lib/fuel";
 
 type Action = (prev: ReviewState, formData: FormData) => Promise<ReviewState>;
 
@@ -113,7 +114,7 @@ export function ExpenseReview({
   );
 }
 
-/** Approve a fill-up (optionally correcting liters, amount, odometer, full tank, rate) or reject it. */
+/** Approve a fill-up (optionally correcting the quantity, unit price, odometer, full tank, rate) or reject it. */
 export function FuelReview({
   approve,
   reject,
@@ -121,8 +122,10 @@ export function FuelReview({
 }: {
   approve: Action;
   reject: Action;
-  initial: { liters: string; amount: string; odometer: string; is_full_tank: boolean; currency: string; fx_rate: string };
+  initial: { qty_unit: string; quantity: string; unit_price: string; odometer: string; is_full_tank: boolean; currency: string; fx_rate: string };
 }) {
+  // Corrections stay in the unit the fill-up was bought in.
+  const unit = isFuelUnit(initial.qty_unit) ? FUEL_UNITS[initial.qty_unit] : FUEL_UNITS.liter;
   return (
     <ReviewForm
       approve={approve}
@@ -130,12 +133,12 @@ export function FuelReview({
       fields={
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <label className={LABEL}>
-            اللترات
-            <Input name="liters" inputMode="decimal" dir="ltr" defaultValue={initial.liters} />
+            {unit.count}
+            <Input name="quantity" inputMode="decimal" dir="ltr" defaultValue={initial.quantity} />
           </label>
           <label className={LABEL}>
-            المبلغ ({initial.currency === "USD" ? "$" : "د.أ"})
-            <Input name="amount" inputMode="decimal" dir="ltr" defaultValue={initial.amount} />
+            {unit.price} ({initial.currency === "USD" ? "$" : "د.أ"})
+            <Input name="unit_price" inputMode="decimal" dir="ltr" defaultValue={initial.unit_price} />
           </label>
           <label className={LABEL}>
             العداد

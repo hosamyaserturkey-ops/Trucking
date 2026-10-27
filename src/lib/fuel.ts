@@ -2,7 +2,9 @@ import { parseMoney, toLatinDigits } from "@/lib/money";
 import { TIMEZONE } from "@/lib/date-range";
 
 // Pure helpers for diesel fill-ups: form parsing (driver phone and office),
-// price per liter, and the km/L a new fill-up implies. Messages are Arabic.
+// units (liter, gallon/قلن, tank/تنكة), and the km/L a new fill-up implies.
+// A gallon or a tank is a unit of its own (its liters aren't known), so km/L
+// only comes from fill-ups in liters. Messages are Arabic.
 
 type Get = (name: string) => string | null;
 
@@ -12,7 +14,40 @@ const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Payment methods offered on the office form (no own tank: the company has none). */
 export const OFFICE_FUEL_PAYMENTS = ["cash", "card", "credit", "driver_advance"] as const;
-export const MAX_LITERS = 2000;
+export const MAX_QUANTITY = 2000;
+
+export type FuelUnit = "liter" | "gallon" | "tank";
+/** Unit names as people say them, and the labels the forms use for each. */
+export const FUEL_UNITS: Record<FuelUnit, { name: string; count: string; price: string }> = {
+  liter: { name: "لتر", count: "عدد اللترات", price: "سعر اللتر" },
+  gallon: { name: "قلن", count: "عدد القلنات", price: "سعر القلن" },
+  tank: { name: "تنكة", count: "عدد التنكات", price: "سعر التنكة" },
+};
+export const isFuelUnit = (v: string): v is FuelUnit => v in FUEL_UNITS;
+
+/** "120.5 لتر", "30 قلن", "6 تنكة". */
+export function formatQuantity(quantity: number | null | undefined, unit: string | null | undefined): string {
+  if (quantity === null || quantity === undefined) return "—";
+  const n = Number(quantity).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return `${n} ${isFuelUnit(unit ?? "") ? FUEL_UNITS[unit as FuelUnit].name : ""}`.trim();
+}
+
+/** Total quantity per unit, e.g. "1,200 لتر · 30 قلن"; empty when there is none. */
+export function quantitySummary(rows: { qty_unit: string | null; quantity: number | null }[], digits = 2): string {
+  const totals = new Map<string, number>();
+  for (const r of rows) {
+    if (r.qty_unit && isFuelUnit(r.qty_unit)) totals.set(r.qty_unit, (totals.get(r.qty_unit) ?? 0) + Number(r.quantity ?? 0));
+  }
+  return (Object.keys(FUEL_UNITS) as FuelUnit[])
+    .filter((u) => totals.get(u))
+    .map((u) => formatQuantity(Number(totals.get(u)!.toFixed(digits)), u))
+    .join(" · ");
+}
+
+/** Cost in minor units: quantity x price per unit, rounded to the fils/cent. */
+export function fuelCost(quantity: number, unitPriceMinor: number): number {
+  return Math.round(quantity * unitPriceMinor);
+}
 
 export type FillupValues = {
   truck_id: string | null; // office only; the driver's truck comes from the trip or his default truck
@@ -21,10 +56,12 @@ export type FillupValues = {
   station_id: string | null;
   filled_at: string; // ISO timestamp (UTC)
   odometer: number;
-  liters: number;
+  qty_unit: FuelUnit;
+  quantity: number;
+  unit_price_minor: number;
   is_full_tank: boolean;
   currency: "JOD" | "USD";
-  amount_minor: number;
+  amount_minor: number; // quantity x unit price; the database computes the same
   fx_rate: number | null; // null: use the currency's default rate
   payment_method: string;
   notes: string | null;
@@ -58,20 +95,16 @@ export function nowTime(now: Date = new Date(), timeZone = TIMEZONE): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
 }
 
-/** Price per liter in minor units, rounded. */
-export function pricePerLiter(amountMinor: number, liters: number): number | null {
-  return liters > 0 ? Math.round(amountMinor / liters) : null;
-}
-
-type Fill = { odometer: number; liters: number; is_full_tank: boolean };
+type Fill = { odometer: number; liters: number | null; is_full_tank: boolean };
 
 /**
  * km/L by the full-tank method for a new full fill-up: km since the truck's
  * previous full fill-up, over this fill's liters plus any partial fills since.
- * `history` is the truck's earlier approved fill-ups, newest first.
+ * `history` is the truck's earlier approved fill-ups, newest first. No figure
+ * when any of those fill-ups was in gallons or tanks (liters unknown).
  */
 export function impliedKmPerLiter(fill: Fill, history: Fill[]): number | null {
-  if (!fill.is_full_tank) return null;
+  if (!fill.is_full_tank || fill.liters === null) return null;
   let partial = 0;
   for (const h of history) {
     if (h.is_full_tank) {
@@ -79,9 +112,28 @@ export function impliedKmPerLiter(fill: Fill, history: Fill[]): number | null {
       const liters = fill.liters + partial;
       return km > 0 && liters > 0 ? Math.round((km / liters) * 100) / 100 : null;
     }
+    if (h.liters === null) return null;
     partial += h.liters;
   }
   return null;
+}
+
+/** Quantity and price per unit from a form: shared by the fill-up and approval forms. */
+function parseQuantityAndPrice(
+  text: (name: string) => string,
+  unitRaw: string,
+  currency: string,
+): { ok: true; qty_unit: FuelUnit; quantity: number; unit_price_minor: number } | { ok: false; error: string } {
+  const qty_unit = unitRaw || "liter";
+  if (!isFuelUnit(qty_unit)) return { ok: false, error: "اختر الوحدة: لتر أو قلن أو تنكة" };
+  const unit = FUEL_UNITS[qty_unit];
+  const qtyText = text("quantity").replace(/[,\s]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(qtyText) || Number(qtyText) <= 0) return { ok: false, error: `أدخل ${unit.count}` };
+  const quantity = Number(qtyText);
+  if (quantity > MAX_QUANTITY) return { ok: false, error: `${unit.count} غير منطقي` };
+  const price = parseMoney(text("unit_price"), currency);
+  if (price === null || price <= 0n) return { ok: false, error: `أدخل ${unit.price}` };
+  return { ok: true, qty_unit, quantity, unit_price_minor: Number(price) };
 }
 
 /** Same rule as fuel_efficiency_v: below the baseline by more than the threshold. */
@@ -130,15 +182,10 @@ export function parseFillup(
   if (!/^\d{1,8}$/.test(odoText)) return { ok: false, error: "أدخل قراءة العداد" };
   const odometer = Number(odoText);
 
-  const litersText = text("liters").replace(/[,\s]/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(litersText) || Number(litersText) <= 0) return { ok: false, error: "أدخل كمية اللترات" };
-  const liters = Number(litersText);
-  if (liters > MAX_LITERS) return { ok: false, error: "كمية اللترات غير منطقية" };
-
   const currency = text("currency") || "JOD";
   if (currency !== "JOD" && currency !== "USD") return { ok: false, error: "عملة غير مدعومة" };
-  const amount = parseMoney(text("amount"), currency);
-  if (amount === null || amount <= 0n) return { ok: false, error: "أدخل المبلغ" };
+  const qp = parseQuantityAndPrice(text, text("qty_unit"), currency);
+  if (!qp.ok) return qp;
 
   let fx_rate: number | null = null;
   if (currency === "JOD") fx_rate = 1;
@@ -173,10 +220,12 @@ export function parseFillup(
       station_id: station.value,
       filled_at,
       odometer,
-      liters,
+      qty_unit: qp.qty_unit,
+      quantity: qp.quantity,
+      unit_price_minor: qp.unit_price_minor,
       is_full_tank: get("is_full_tank") === "on" || get("is_full_tank") === "true",
       currency,
-      amount_minor: Number(amount),
+      amount_minor: fuelCost(qp.quantity, qp.unit_price_minor),
       fx_rate,
       payment_method,
       notes: notes || null,
@@ -185,23 +234,28 @@ export function parseFillup(
   };
 }
 
-/** What the reviewer may correct before approving a fill-up. */
+export type FuelApprovalValues = {
+  quantity: number;
+  unit_price_minor: number; // the database recomputes the cost from these two
+  odometer: number;
+  is_full_tank: boolean;
+  fx_rate?: number;
+};
+
+/** What the reviewer may correct before approving a fill-up (in the fill-up's own unit). */
 export function parseFuelApproval(
   get: Get,
   currency: string,
-): { ok: true; values: { liters: number; amount_minor: number; odometer: number; is_full_tank: boolean; fx_rate?: number } } | { ok: false; error: string } {
+  unit: string,
+): { ok: true; values: FuelApprovalValues } | { ok: false; error: string } {
   const text = (name: string) => toLatinDigits((get(name) ?? "").trim()).replace(/[,\s]/g, "");
-  const litersText = text("liters");
-  if (!/^\d+(\.\d{1,2})?$/.test(litersText) || Number(litersText) <= 0 || Number(litersText) > MAX_LITERS) {
-    return { ok: false, error: "كمية اللترات غير صحيحة" };
-  }
-  const amount = parseMoney(text("amount"), currency);
-  if (amount === null || amount <= 0n) return { ok: false, error: "المبلغ غير صحيح" };
+  const qp = parseQuantityAndPrice(text, unit, currency);
+  if (!qp.ok) return qp;
   const odo = text("odometer");
   if (!/^\d{1,8}$/.test(odo)) return { ok: false, error: "قراءة العداد غير صحيحة" };
-  const values: { liters: number; amount_minor: number; odometer: number; is_full_tank: boolean; fx_rate?: number } = {
-    liters: Number(litersText),
-    amount_minor: Number(amount),
+  const values: FuelApprovalValues = {
+    quantity: qp.quantity,
+    unit_price_minor: qp.unit_price_minor,
     odometer: Number(odo),
     is_full_tank: get("is_full_tank") === "on",
   };
