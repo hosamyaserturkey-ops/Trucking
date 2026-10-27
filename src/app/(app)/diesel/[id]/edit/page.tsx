@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, EmptyState, PageHeader } from "@/components/ui/card";
 import { OfficeFillupForm } from "@/components/office-fillup-form";
 import { WithdrawExpenseButton } from "@/components/driver-trip-card";
+import { JournalEntryCard } from "@/components/journal-entry-card";
 
 export const metadata: Metadata = { title: "تعديل تعبئة" };
 
@@ -28,7 +29,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: f } = await supabase
     .from("fuel_fillups")
-    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, fx_rate, payment_method, notes, receipt_path, status, settlement_id, reviewed_at")
+    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, fx_rate, payment_method, voucher_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at")
     .eq("id", id)
     .maybeSingle();
   if (!f) notFound();
@@ -70,6 +71,8 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
                 currency: f.currency,
                 fx_rate: String(f.fx_rate),
                 payment_method: f.payment_method,
+                voucher_no: f.voucher_no,
+                notice_no: f.notice_no,
                 notes: f.notes,
                 hasReceipt: Boolean(f.receipt_path),
               }}
@@ -89,6 +92,11 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
           </EmptyState>
         )}
       </Card>
+      {finance ? (
+        <div className="mt-5">
+          <JournalEntryCard sourceType="fuel" sourceId={f.id} />
+        </div>
+      ) : null}
     </>
   );
 }

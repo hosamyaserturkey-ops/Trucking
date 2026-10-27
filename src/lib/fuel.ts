@@ -1,5 +1,6 @@
 import { parseMoney, toLatinDigits } from "@/lib/money";
 import { TIMEZONE } from "@/lib/date-range";
+import { parseDocNumbers } from "@/lib/doc-numbers";
 
 // Pure helpers for diesel fill-ups: form parsing (driver phone and office),
 // units (liter, gallon/قلن, tank/تنكة), and the km/L a new fill-up implies.
@@ -65,6 +66,8 @@ export type FillupValues = {
   fx_rate: number | null; // null: use the currency's default rate
   payment_method: string;
   notes: string | null;
+  voucher_no: string | null; // office only
+  notice_no: string | null; // office only
   receipt_upload: string | null;
 };
 
@@ -210,6 +213,9 @@ export function parseFillup(
 
   const notes = (get("notes") ?? "").trim();
   if (notes.length > 500) return { ok: false, error: "الملاحظة طويلة جداً" };
+  // The driver has no voucher: the office writes one when it pays.
+  const docs = parseDocNumbers(opts.mode === "office" ? text : () => "", ["voucher_no", "notice_no"] as const);
+  if (!docs.ok) return docs;
 
   return {
     ok: true,
@@ -229,6 +235,7 @@ export function parseFillup(
       fx_rate,
       payment_method,
       notes: notes || null,
+      ...docs.values,
       receipt_upload: receipt || null,
     },
   };

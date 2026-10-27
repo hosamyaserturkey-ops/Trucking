@@ -44,7 +44,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
   let query = supabase
     .from("expenses")
     .select(
-      "id, expense_date, cost_scope, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, status, receipt_path, settlement_id, truck:trucks(id, code), driver:drivers(full_name), category:expense_categories(name_ar)",
+      "id, expense_date, cost_scope, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, voucher_no, customs_declaration_no, status, receipt_path, settlement_id, truck:trucks(id, code), driver:drivers(full_name), category:expense_categories(name_ar)",
     )
     .gte("expense_date", range.from)
     .lt("expense_date", range.to)
@@ -76,10 +76,15 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
         subtitle={`${formatInt(rows.length)} مصروف · من ${range.from} إلى ${inclusiveEnd(range)}`}
         action={
           finance ? (
-            <LinkButton href="/expenses/new" variant="primary">
-              <Plus className="size-4" aria-hidden />
-              مصروف جديد
-            </LinkButton>
+            <div className="flex flex-wrap gap-2">
+              <LinkButton href={`/ledger/expenses?from=${range.from}&to=${inclusiveEnd(range)}`} variant="secondary">
+                كشف حساب المصاريف
+              </LinkButton>
+              <LinkButton href="/expenses/new" variant="primary">
+                <Plus className="size-4" aria-hidden />
+                مصروف جديد
+              </LinkButton>
+            </div>
           ) : null
         }
       />
@@ -176,6 +181,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
                   <Th>البيان</Th>
                   <Th>التحميل</Th>
                   <Th>السائق</Th>
+                  <Th>سند الصرف</Th>
+                  <Th>البيان الجمركي</Th>
                   <Th className="text-end">المبلغ</Th>
                   <Th className="text-end">بالدينار</Th>
                   <Th>الدفع</Th>
@@ -209,6 +216,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
                         )}
                       </Td>
                       <Td className="whitespace-nowrap">{(e.driver as { full_name: string } | null)?.full_name ?? "—"}</Td>
+                      <Td className="num whitespace-nowrap">
+                        <span dir="ltr">{e.voucher_no ?? ""}</span>
+                      </Td>
+                      <Td className="num whitespace-nowrap">
+                        <span dir="ltr">{e.customs_declaration_no ?? ""}</span>
+                      </Td>
                       <Td className="num text-end whitespace-nowrap">{formatMoney(e.amount_minor, e.currency)}</Td>
                       <Td className="num text-end whitespace-nowrap">{formatMoney(e.amount_base_minor, "JOD", { withCurrency: false })}</Td>
                       <Td className="whitespace-nowrap">{PAYMENT_METHOD[e.payment_method ?? ""] ?? e.payment_method}</Td>

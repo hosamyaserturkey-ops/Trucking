@@ -54,6 +54,8 @@ export async function saveOfficeFillup(id: string | null, _prev: FillupFormState
     fx_rate,
     payment_method: v.payment_method,
     notes: v.notes,
+    voucher_no: v.voucher_no,
+    notice_no: v.notice_no,
   };
 
   let receipt_path: string | null = null;

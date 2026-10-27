@@ -408,6 +408,89 @@ async function tripAndAdvanceFlow(browser) {
   await Promise.all([disp.page.waitForURL(/\/diesel$/, { timeout: 20000 }), disp.page.getByRole("button", { name: "حذف" }).click()]);
   check((await disp.page.locator("tr", { hasText: "30 قلن" }).filter({ hasText: "بانتظار الموافقة" }).count()) === 0, "dispatcher deletes the waiting gallon fill-up");
 
+  // 9c. Expenses as journal entries: documents on the expense, the entry it posts, the
+  // account statement with a running balance, and a correction as a reversing entry.
+  const voucher = `V-${stamp}`.slice(0, 30);
+  const fillJournalExpense = async (description, amount, voucherNo) => {
+    await acc.page.goto(`${BASE}/expenses/new`);
+    await acc.page.selectOption("#truck_id", { index: 3 });
+    await acc.page.selectOption("#category_id", { index: 1 });
+    await acc.page.fill("#description", description);
+    await acc.page.fill("#amount", amount);
+    await acc.page.fill("#voucher_no", voucherNo);
+  };
+  await fillJournalExpense(`${stamp} journal`, "33.5", voucher);
+  await acc.page.fill("#customs_declaration_no", `CD-${stamp}`);
+  await acc.page.fill("#notice_no", "N-77");
+  await acc.page.fill("#notes", `${stamp} note`);
+  await Promise.all([acc.page.waitForURL(/\/expenses\?saved=1/, { timeout: 30000 }), acc.page.getByRole("button", { name: "حفظ المصروف" }).click()]);
+  const jRow = acc.page.locator("tr", { hasText: `${stamp} journal` });
+  check((await jRow.innerText()).includes(voucher) && (await jRow.innerText()).includes(`CD-${stamp}`), "the expense list shows its voucher and customs declaration numbers");
+
+  await fillJournalExpense(`${stamp} duplicate`, "1", voucher);
+  await acc.page.getByRole("button", { name: "حفظ المصروف" }).click();
+  await acc.page.locator("main [role=alert]").waitFor({ timeout: 15000 });
+  check((await acc.page.locator("main [role=alert]").innerText()).includes("مستخدم مسبقاً"), "a voucher number cannot be used twice");
+
+  await acc.page.goto(`${BASE}/expenses`);
+  await acc.page.locator("tr", { hasText: `${stamp} journal` }).getByRole("link", { name: "تعديل" }).click();
+  await acc.page.waitForURL(/\/expenses\/[0-9a-f-]{36}\/edit/);
+  const journalExpenseUrl = acc.page.url();
+  const entryCard = await acc.page.locator("section", { hasText: "القيد المحاسبي" }).innerText();
+  check(entryCard.includes("33.500") && entryCard.includes("الصندوق") && /قيد \d+/.test(entryCard), "the expense shows its journal entry: Dr the expense, Cr cash");
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Amman" });
+
+  await acc.page.goto(`${BASE}/ledger?from=${today}&to=${today}`);
+  const tbFoot = await acc.page.locator("tfoot td").allInnerTexts();
+  check(tbFoot.length === 5 && tbFoot[2] === tbFoot[3] && tbFoot[2] !== "", "the trial balance's debits equal its credits");
+  const tb = await layoutOk(acc.page);
+  check(tb.rtl && tb.noSideScroll && !tb.loadError, "the trial balance opens");
+  await acc.page.screenshot({ path: path.join(OUT, "trial-balance.png"), fullPage: true });
+
+  await acc.page.getByRole("link", { name: "كشف حساب كل المصاريف" }).click();
+  await acc.page.waitForURL(/\/ledger\/expenses/);
+  const stRow = acc.page.locator("tbody tr", { hasText: `${stamp} journal` });
+  const stText = (await stRow.count()) === 1 ? await stRow.innerText() : "";
+  check(stText.includes(voucher) && stText.includes(`CD-${stamp}`) && stText.includes("N-77") && stText.includes(`${stamp} note`) && stText.includes("33.500"),
+    "the expenses statement shows the date, entry, customs declaration, voucher, notice, notes and the debit");
+  check((await acc.page.locator("tbody tr").first().innerText()).includes("رصيد أول المدة") && /مدين|دائن/.test(await acc.page.locator("tfoot").innerText()),
+    "the statement starts from the opening balance and ends with the running balance");
+  await acc.page.screenshot({ path: path.join(OUT, "statement-expenses.png"), fullPage: true });
+
+  await acc.page.goto(journalExpenseUrl);
+  await acc.page.fill("#amount", "40");
+  await Promise.all([acc.page.waitForURL(/\/expenses\?saved=1/, { timeout: 30000 }), acc.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await acc.page.goto(`${BASE}/ledger?from=${today}&to=${today}`);
+  await acc.page.getByRole("link", { name: "الصندوق" }).first().click();
+  await acc.page.waitForURL(/\/ledger\/[0-9a-f-]{36}/);
+  const cashRows = acc.page.locator("tbody tr", { hasText: `${stamp} journal` });
+  const cashText = (await cashRows.allInnerTexts()).join(" | ");
+  check((await cashRows.count()) === 2 && cashText.includes("(معكوس)") && cashText.includes("40.000"),
+    "after a correction the cash statement shows the old entry as reversed and the new one");
+  check((await acc.page.locator("tbody tr", { hasText: "عكس القيد رقم" }).count()) >= 1, "the reversing entry is in the statement");
+
+  const printHref = await acc.page.getByRole("link", { name: "طباعة الكشف" }).getAttribute("href");
+  const stPrint = await acc.context.newPage();
+  await stPrint.goto(`${BASE}${printHref}`);
+  check((await stPrint.locator("main").innerText()).includes(voucher), "the statement prints with the voucher numbers");
+  await stPrint.close();
+
+  const entryNo = /قيد (\d+)/.exec(entryCard)?.[1];
+  await acc.page.goto(`${BASE}/journal?entry=${entryNo}`);
+  check((await acc.page.locator(`table[data-entry="${entryNo}"] tbody tr`).count()) === 2, "the journal shows the entry with its two lines");
+
+  const jPhone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
+  for (const url of ["/ledger", "/ledger/expenses", "/journal"]) {
+    await jPhone.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(jPhone.page);
+    check(ok.rtl && ok.noSideScroll, `${url} fits a phone`);
+  }
+  await jPhone.context.close();
+  for (const url of ["/ledger", "/journal"]) {
+    await disp.page.goto(`${BASE}${url}`);
+    check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
+  }
+
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).
   const sheetUrl = disp.page.url.bind(disp.page);

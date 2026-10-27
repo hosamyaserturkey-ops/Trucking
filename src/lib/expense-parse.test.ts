@@ -11,7 +11,12 @@ const base = { category_id: CAT, description: "إطار أمامي", amount: "32
 
 describe("parseOfficeExpense", () => {
   it("parses a truck expense", () => {
-    expect(parseOfficeExpense(form({ ...base, truck_id: TRUCK, payment_method: "bank", reference_no: "INV-77" }), opts)).toEqual({
+    expect(
+      parseOfficeExpense(
+        form({ ...base, truck_id: TRUCK, payment_method: "bank", reference_no: "INV-77", voucher_no: " ١٠٥٢ ", notice_no: "N-9", notes: " ملاحظة " }),
+        opts,
+      ),
+    ).toEqual({
       ok: true,
       values: {
         cost_scope: "truck",
@@ -27,6 +32,10 @@ describe("parseOfficeExpense", () => {
         fx_rate: 1,
         payment_method: "bank",
         reference_no: "INV-77",
+        voucher_no: "1052",
+        customs_declaration_no: null,
+        notice_no: "N-9",
+        notes: "ملاحظة",
         receipt_upload: null,
       },
     });

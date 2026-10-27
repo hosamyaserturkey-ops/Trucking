@@ -50,6 +50,8 @@ describe("parseFillup (driver)", () => {
         fx_rate: 1,
         payment_method: "driver_advance",
         notes: null,
+        voucher_no: null,
+        notice_no: null,
         receipt_upload: receipt,
       },
     });
@@ -115,6 +117,17 @@ describe("parseFillup (office)", () => {
     const r = parseFillup(form({ ...base, truck_id: TRUCK, payment_method: "credit", is_full_tank: "" }), opts);
     expect(r.ok && r.values).toMatchObject({ truck_id: TRUCK, payment_method: "credit", is_full_tank: false, receipt_upload: null });
     expect(parseFillup(form({ ...base, truck_id: TRUCK, payment_method: "own_tank" }), opts).ok).toBe(false);
+  });
+
+  it("keeps the voucher and notice numbers; a driver's phone sends none", () => {
+    const r = parseFillup(form({ ...base, truck_id: TRUCK, voucher_no: "١٢٣", notice_no: "N-1" }), opts);
+    expect(r.ok && r.values).toMatchObject({ voucher_no: "123", notice_no: "N-1" });
+    const d = parseFillup(form({ ...base, voucher_no: "123", receipt_upload: `tmp/receipts/${USER}/2026-10/x.jpg` }), {
+      mode: "driver",
+      userId: USER,
+      now: NOW,
+    });
+    expect(d.ok && d.values.voucher_no).toBeNull();
   });
 
   it("paid from an advance needs the driver", () => {

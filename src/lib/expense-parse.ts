@@ -1,4 +1,5 @@
 import { parseMoney, toLatinDigits } from "@/lib/money";
+import { parseDocNumbers } from "@/lib/doc-numbers";
 
 // Office expense form (tires, tolls, fines, operating costs, overhead).
 // Pure and unit tested; messages are Arabic.
@@ -24,6 +25,10 @@ export type OfficeExpenseValues = {
   fx_rate: number;
   payment_method: string;
   reference_no: string | null;
+  voucher_no: string | null;
+  customs_declaration_no: string | null;
+  notice_no: string | null;
+  notes: string | null;
   receipt_upload: string | null;
 };
 
@@ -85,6 +90,10 @@ export function parseOfficeExpense(
 
   const reference_no = text("reference_no");
   if (reference_no.length > 60) return { ok: false, error: "رقم المرجع طويل جداً" };
+  const docs = parseDocNumbers(text, ["voucher_no", "customs_declaration_no", "notice_no"] as const);
+  if (!docs.ok) return docs;
+  const notes = (get("notes") ?? "").trim();
+  if (notes.length > 500) return { ok: false, error: "الملاحظات طويلة جداً" };
 
   const receipt = text("receipt_upload");
   if (receipt && (!receipt.startsWith(`tmp/receipts/${opts.userId}/`) || receipt.includes(".."))) {
@@ -107,6 +116,8 @@ export function parseOfficeExpense(
       fx_rate,
       payment_method,
       reference_no: reference_no || null,
+      ...docs.values,
+      notes: notes || null,
       receipt_upload: receipt || null,
     },
   };

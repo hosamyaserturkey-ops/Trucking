@@ -6,6 +6,10 @@
 begin;
 
 truncate
+  public.invoice_lines,
+  public.invoices,
+  public.client_receipts,
+  app.voucher_numbers,
   public.driver_advances,
   public.driver_settlements,
   public.journal_lines,

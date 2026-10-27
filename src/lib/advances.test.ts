@@ -40,7 +40,18 @@ describe("parseAdvance", () => {
   it("defaults to today, JOD and cash", () => {
     expect(parseAdvance(form({ driver_id: DRIVER, amount: "150" }), { today })).toEqual({
       ok: true,
-      values: { driver_id: DRIVER, trip_id: null, issued_on: today, currency: "JOD", amount_minor: 150_000, fx_rate: 1, method: "cash", notes: null },
+      values: {
+        driver_id: DRIVER,
+        trip_id: null,
+        issued_on: today,
+        currency: "JOD",
+        amount_minor: 150_000,
+        fx_rate: 1,
+        method: "cash",
+        notes: null,
+        voucher_no: null,
+        notice_no: null,
+      },
     });
   });
   it("rejects future dates, missing driver and bad methods", () => {
@@ -48,6 +59,8 @@ describe("parseAdvance", () => {
     expect(parseAdvance(form({ amount: "1" }), { today }).ok).toBe(false);
     expect(parseAdvance(form({ driver_id: DRIVER, amount: "1", method: "card" }), { today }).ok).toBe(false);
     expect(parseAdvance(form({ driver_id: DRIVER, amount: "1", currency: "USD", fx_rate: "" }), { today }).ok).toBe(false);
+    const withVoucher = parseAdvance(form({ driver_id: DRIVER, amount: "1", voucher_no: "٢٠٠", notice_no: "TRF-1" }), { today });
+    expect(withVoucher.ok && withVoucher.values).toMatchObject({ voucher_no: "200", notice_no: "TRF-1" });
   });
 });
 

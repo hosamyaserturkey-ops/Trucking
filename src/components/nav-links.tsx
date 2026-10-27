@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  BookText,
   Building2,
   CircleCheck,
   ClipboardList,
@@ -13,6 +14,7 @@ import {
   MapPin,
   Receipt,
   Route,
+  Scale,
   ShieldCheck,
   Store,
   Truck,
@@ -38,6 +40,8 @@ const ICONS: Record<string, LucideIcon> = {
   wallet: Wallet,
   fuel: Fuel,
   receipt: Receipt,
+  scale: Scale,
+  journal: BookText,
 };
 
 function isActive(pathname: string, href: string) {

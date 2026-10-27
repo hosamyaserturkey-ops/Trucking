@@ -1,4 +1,5 @@
-import { parseMoney } from "@/lib/money";
+import { parseMoney, toLatinDigits } from "@/lib/money";
+import { parseDocNumbers } from "@/lib/doc-numbers";
 
 // Pure helpers for expense review, driver advances and settlements.
 // Messages are in Arabic for the user.
@@ -46,6 +47,8 @@ export type AdvanceValues = {
   fx_rate: number;
   method: "cash" | "bank";
   notes: string | null;
+  voucher_no: string | null;
+  notice_no: string | null;
 };
 
 /** Cash or bank advance handed to a driver. */
@@ -66,9 +69,11 @@ export function parseAdvance(get: Get, opts: { today: string }): Result<AdvanceV
   if (fx_rate === null) return { ok: false, error: "سعر الصرف غير صحيح" };
   const method = text("method") || "cash";
   if (method !== "cash" && method !== "bank") return { ok: false, error: "طريقة الصرف غير صحيحة" };
+  const docs = parseDocNumbers((name) => toLatinDigits(text(name)), ["voucher_no", "notice_no"] as const);
+  if (!docs.ok) return docs;
   return {
     ok: true,
-    values: { driver_id, trip_id, issued_on, currency, amount_minor: Number(amount), fx_rate, method, notes: text("notes") || null },
+    values: { driver_id, trip_id, issued_on, currency, amount_minor: Number(amount), fx_rate, method, notes: text("notes") || null, ...docs.values },
   };
 }
 
