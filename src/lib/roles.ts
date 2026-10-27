@@ -25,6 +25,7 @@ export type NavItem = { href: string; label: string; icon: string; roles: AppRol
 // Order is the order shown in the sidebar.
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "الأسطول", icon: "truck", roles: STAFF_ROLES },
+  { href: "/loading", label: "كشف التحميل", icon: "clipboard", roles: STAFF_ROLES },
   { href: "/trips", label: "الرحلات", icon: "route", roles: STAFF_ROLES },
   { href: "/approvals", label: "الموافقات", icon: "check", roles: FINANCE_ROLES },
   { href: "/advances", label: "العهد", icon: "wallet", roles: STAFF_ROLES },

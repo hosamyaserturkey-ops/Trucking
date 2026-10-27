@@ -99,9 +99,16 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
     readRoles: STAFF,
     writeRoles: FINANCE,
     orderBy: "name",
-    list: ["name", "city", "phone", "payment_terms_days", "default_currency", "is_active"],
+    list: ["name", "ref_code", "city", "phone", "payment_terms_days", "default_currency", "is_active"],
     fields: [
       { name: "name", label: "الاسم", type: "text", required: true },
+      {
+        name: "ref_code",
+        label: "رمز الإشارة",
+        type: "text",
+        ltr: true,
+        hint: "2–6 أحرف إنجليزية أو أرقام، مثل ARB. تبدأ به أرقام الإشارة لنقلات هذا الزبون (ARB-0001)",
+      },
       { name: "tax_number", label: "الرقم الضريبي", type: "text", ltr: true },
       { name: "phone", label: "الهاتف", type: "text", ltr: true },
       { name: "email", label: "البريد الإلكتروني", type: "text", ltr: true },

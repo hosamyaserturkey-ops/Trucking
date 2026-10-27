@@ -62,6 +62,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          client_no: number
           created_at: string
           created_by: string | null
           credit_limit_base_minor: number | null
@@ -73,12 +74,14 @@ export type Database = {
           notes: string | null
           payment_terms_days: number
           phone: string | null
+          ref_code: string | null
           tax_number: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           city?: string | null
+          client_no?: never
           created_at?: string
           created_by?: string | null
           credit_limit_base_minor?: number | null
@@ -90,12 +93,14 @@ export type Database = {
           notes?: string | null
           payment_terms_days?: number
           phone?: string | null
+          ref_code?: string | null
           tax_number?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           city?: string | null
+          client_no?: never
           created_at?: string
           created_by?: string | null
           credit_limit_base_minor?: number | null
@@ -107,6 +112,7 @@ export type Database = {
           notes?: string | null
           payment_terms_days?: number
           phone?: string | null
+          ref_code?: string | null
           tax_number?: string | null
           updated_at?: string
         }
@@ -1240,7 +1246,10 @@ export type Database = {
         Row: {
           cargo_description: string | null
           cargo_weight_tons: number | null
+          client_doc_no: string | null
           client_id: string | null
+          client_ref: string | null
+          client_ref_no: number | null
           created_at: string
           created_by: string | null
           currency: string
@@ -1248,6 +1257,7 @@ export type Database = {
           driver_id: string | null
           end_date: string | null
           end_odometer: number | null
+          entry_source: string
           freight_base_minor: number
           freight_minor: number
           from_location_id: string | null
@@ -1266,7 +1276,10 @@ export type Database = {
         Insert: {
           cargo_description?: string | null
           cargo_weight_tons?: number | null
+          client_doc_no?: string | null
           client_id?: string | null
+          client_ref?: string | null
+          client_ref_no?: number | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1274,6 +1287,7 @@ export type Database = {
           driver_id?: string | null
           end_date?: string | null
           end_odometer?: number | null
+          entry_source?: string
           freight_base_minor?: number
           freight_minor?: number
           from_location_id?: string | null
@@ -1292,7 +1306,10 @@ export type Database = {
         Update: {
           cargo_description?: string | null
           cargo_weight_tons?: number | null
+          client_doc_no?: string | null
           client_id?: string | null
+          client_ref?: string | null
+          client_ref_no?: number | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1300,6 +1317,7 @@ export type Database = {
           driver_id?: string | null
           end_date?: string | null
           end_odometer?: number | null
+          entry_source?: string
           freight_base_minor?: number
           freight_minor?: number
           from_location_id?: string | null

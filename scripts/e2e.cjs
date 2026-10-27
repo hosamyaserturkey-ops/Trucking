@@ -363,6 +363,83 @@ async function tripAndAdvanceFlow(browser) {
   await disp.page.goto(`${BASE}/expenses/new`);
   check(new URL(disp.page.url()).pathname !== "/expenses/new", "dispatcher is kept out of the expense form");
 
+  // 10. Daily loading sheet: one line per load, references from the customer's own series.
+  // The dispatcher's page already accepts confirmation dialogs (step 2).
+  const sheetUrl = disp.page.url.bind(disp.page);
+  const addLoad = async (label, tons) => {
+    await disp.page.goto(`${BASE}/loading`);
+    const truckValue = await disp.page.locator("#truck_id option").filter({ hasText: truckCode }).first().getAttribute("value");
+    await disp.page.selectOption("#truck_id", truckValue);
+    await disp.page.selectOption("#client_id", { index: 1 });
+    await disp.page.selectOption("#from_location_id", { index: 1 });
+    await disp.page.selectOption("#to_location_id", { index: 2 });
+    await disp.page.fill("#cargo_description", `${stamp} ${label}`);
+    await disp.page.fill("#cargo_weight_tons", tons);
+    await disp.page.fill("#freight", "210");
+    await disp.page.fill("#client_doc_no", `BL-${label}`);
+    const driverFilled = (await disp.page.inputValue("#driver_id")) !== "";
+    await Promise.all([
+      disp.page.waitForURL(/\/loading\?.*saved=/, { timeout: 30000 }),
+      disp.page.getByRole("button", { name: "حفظ النقلة" }).click(),
+    ]);
+    return { ref: new URL(sheetUrl()).searchParams.get("saved") ?? "", driverFilled };
+  };
+  const refNo = (ref) => Number(ref.split("-").pop());
+
+  const first = await addLoad("sheet A", "30.5");
+  check(first.driverFilled, "the loading sheet fills in the truck's driver");
+  check(/^[A-Z0-9]{2,6}-\d{4}$/.test(first.ref), `a sheet line gets a customer reference (${first.ref})`);
+  check((await disp.page.locator("tr", { hasText: `${stamp} sheet A` }).innerText()).includes(first.ref), "the line shows its reference on the sheet");
+  const second = await addLoad("sheet B", "28");
+  check(second.ref.split("-")[0] === first.ref.split("-")[0] && refNo(second.ref) === refNo(first.ref) + 1,
+    "the next load for the same customer takes the next number");
+
+  await disp.page.locator("tr", { hasText: `${stamp} sheet A` }).getByRole("link", { name: "تعديل" }).click();
+  await disp.page.waitForURL(/\/loading\/[0-9a-f-]{36}\/edit/);
+  await disp.page.fill("#cargo_weight_tons", "31");
+  await Promise.all([
+    disp.page.waitForURL(/\/loading\?.*saved=/, { timeout: 30000 }),
+    disp.page.getByRole("button", { name: "حفظ التعديلات" }).click(),
+  ]);
+  check(new URL(sheetUrl()).searchParams.get("saved") === first.ref, "editing a line keeps its reference");
+
+  await Promise.all([
+    disp.page.waitForURL(/\/loading\?.*deleted=1/, { timeout: 30000 }),
+    disp.page.locator("tr", { hasText: `${stamp} sheet B` }).getByRole("button").click(),
+  ]);
+  check((await disp.page.locator("tr", { hasText: `${stamp} sheet B` }).count()) === 0, "a line typed by mistake can be deleted");
+  const third = await addLoad("sheet C", "29");
+  check(refNo(third.ref) === refNo(second.ref) + 1, "a deleted line's number is not given out again");
+
+  await disp.page.goto(`${BASE}/trips`);
+  const sheetTrip = disp.page.locator("tr", { hasText: first.ref });
+  check((await sheetTrip.count()) === 1 && (await sheetTrip.innerText()).includes("كشف"), "sheet lines also show in the trips list, marked كشف");
+
+  await disp.page.goto(`${BASE}/print/loading`);
+  check((await disp.page.content()).includes(third.ref), "the printable loading sheet lists the day's loads");
+  await disp.page.pdf({ path: path.join(OUT, "loading-sheet.pdf"), format: "A4", landscape: true, printBackground: true });
+  check(fs.statSync(path.join(OUT, "loading-sheet.pdf")).size > 10000, "the loading sheet exports to PDF");
+
+  await acc.page.goto(`${BASE}/loading`);
+  check((await acc.page.locator("tr", { hasText: first.ref }).count()) === 1 && (await acc.page.locator("#truck_id").count()) === 0,
+    "the accountant sees the sheet but cannot add lines");
+  await acc.page.screenshot({ path: path.join(OUT, "loading.png"), fullPage: true });
+
+  const sheetPhone = await login(browser, need("E2E_DISPATCHER_EMAIL"), need("E2E_DISPATCHER_PASSWORD"), VIEWPORTS.mobile);
+  await sheetPhone.page.goto(`${BASE}/loading`);
+  const sheetFits = await layoutOk(sheetPhone.page);
+  check(sheetFits.rtl && sheetFits.noSideScroll, "/loading fits a phone");
+  await sheetPhone.context.close();
+
+  // Leave the demo data as it was: remove this run's sheet lines.
+  for (const label of ["sheet A", "sheet C"]) {
+    await disp.page.goto(`${BASE}/loading`);
+    await Promise.all([
+      disp.page.waitForURL(/\/loading\?.*deleted=1/, { timeout: 30000 }),
+      disp.page.locator("tr", { hasText: `${stamp} ${label}` }).getByRole("button").click(),
+    ]);
+  }
+
   for (const s of [drv, disp, acc]) await s.context.close();
 }
 

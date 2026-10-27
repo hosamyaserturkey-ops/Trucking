@@ -43,12 +43,23 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
   if (truck) query = query.eq("truck_id", truck);
   if (driver) query = query.eq("driver_id", driver);
 
-  const [tripsRes, trucksRes, driversRes] = await Promise.all([
+  // Loading sheet lines and customer references live on trips, not in the profit view.
+  let refsQuery = supabase
+    .from("trips")
+    .select("id, entry_source, client_ref")
+    .or(`${tripInRange(range)},status.eq.in_progress,status.eq.planned`)
+    .limit(500);
+  if (truck) refsQuery = refsQuery.eq("truck_id", truck);
+  if (driver) refsQuery = refsQuery.eq("driver_id", driver);
+
+  const [tripsRes, trucksRes, driversRes, refsRes] = await Promise.all([
     query,
     supabase.from("trucks").select("id, code").order("code"),
     supabase.from("drivers").select("id, full_name").order("full_name"),
+    refsQuery,
   ]);
   const trips = tripsRes.data ?? [];
+  const refs = new Map((refsRes.data ?? []).map((r) => [r.id, r]));
   const codes = new Map((trucksRes.data ?? []).map((t) => [t.id, t.code]));
   const running = trips.filter((t) => t.status === "in_progress").length;
   const planned = trips.filter((t) => t.status === "planned").length;
@@ -145,6 +156,11 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                       <Link href={`/trips/${t.trip_id}`} className="num font-semibold text-primary hover:underline">
                         {t.trip_no}
                       </Link>
+                      {refs.get(t.trip_id ?? "")?.client_ref ? (
+                        <span className="num block text-xs text-muted" dir="ltr">
+                          {refs.get(t.trip_id ?? "")?.client_ref}
+                        </span>
+                      ) : null}
                     </Td>
                     <Td className="num whitespace-nowrap">{formatDate(t.start_date)}</Td>
                     <Td className="num whitespace-nowrap">{codes.get(t.truck_id ?? "") ?? "—"}</Td>
@@ -162,8 +178,13 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                         {t.status === "completed" ? formatMoney(t.profit_base_minor, "JOD", { withCurrency: false }) : "—"}
                       </Td>
                     ) : null}
-                    <Td>
+                    <Td className="whitespace-nowrap">
                       <Badge tone={st.tone}>{st.label}</Badge>
+                      {refs.get(t.trip_id ?? "")?.entry_source === "sheet" ? (
+                        <span className="ms-1">
+                          <Badge tone="info">كشف</Badge>
+                        </span>
+                      ) : null}
                     </Td>
                   </Tr>
                 );
