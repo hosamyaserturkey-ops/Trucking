@@ -9,7 +9,7 @@ psql -q -v ON_ERROR_STOP=1 -d postgres -c "drop database if exists $DB" -c "crea
 run() { psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "$1" >/dev/null; echo "ok  $1"; }
 run supabase/tests/_shim.sql
 for f in supabase/migrations/*.sql; do run "$f"; done
-if [ "${SKIP_SEED:-0}" != "1" ]; then for f in supabase/seed.sql supabase/seed_phase2.sql supabase/seed_phase3.sql supabase/seed_invoices.sql; do run "$f"; done; fi
+if [ "${SKIP_SEED:-0}" != "1" ]; then for f in supabase/seed.sql supabase/seed_phase2.sql supabase/seed_phase3.sql supabase/seed_invoices.sql supabase/seed_payments.sql; do run "$f"; done; fi
 status=0
 for f in supabase/tests/[0-9]*.sql; do
   if out=$(psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "$f" 2>&1); then echo "ok  $f"; else echo "FAIL $f"; status=1; fi

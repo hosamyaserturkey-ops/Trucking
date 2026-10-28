@@ -26,6 +26,7 @@ function DocNumbers({ line }: { line: StatementLine }) {
   const docs: [string, string | number | null][] = [
     ["فاتورة", line.invoice_no],
     ["سند قبض", line.receipt_no],
+    ["دفعة مورد", line.payment_no],
     ["شيك", line.cheque_no],
     ["بيان جمركي", line.customs_declaration_no],
     ["سند صرف", line.voucher_no],

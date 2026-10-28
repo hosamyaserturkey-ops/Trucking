@@ -13,6 +13,7 @@ describe("decideUpload", () => {
     fuel_receipt: { driver: true, manager: true, accountant: true, dispatcher: true },
     truck_document: { driver: false, manager: true, accountant: false, dispatcher: true },
     customs_document: { driver: false, manager: true, accountant: true, dispatcher: true },
+    driver_license: { driver: false, manager: true, accountant: true, dispatcher: true },
   } as const;
 
   it("matches who may write each kind of row today", () => {

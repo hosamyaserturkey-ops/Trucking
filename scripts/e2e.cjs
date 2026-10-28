@@ -614,6 +614,121 @@ async function tripAndAdvanceFlow(browser) {
   await cdMissing().waitFor({ timeout: 20000 });
   check(true, "the test declaration is deleted again (its expense waits for a file again)");
 
+  // 9f. Supplier payments: what a supplier is owed (bought on credit), paid with a cheque we issue,
+  // posted against his account, printed as a payment voucher; the bank pays the cheque. The test
+  // payment is deleted again at the end, which reverses its entries.
+  await acc.page.goto(`${BASE}/payables`);
+  const owedRow = acc.page.locator("tbody tr").first();
+  const supplierName = (await owedRow.locator("td").first().locator("a").innerText()).trim();
+  const statementHref = await owedRow.locator("td").first().locator("a").getAttribute("href");
+  check(!!supplierName && /\/ledger\/[0-9a-f-]{36}\?supplier=/.test(statementHref ?? ""), "suppliers owed money are listed, each with his statement");
+  await owedRow.getByRole("link", { name: "دفعة" }).click();
+  await acc.page.waitForURL(/\/payments\?supplier=/);
+  check((await acc.page.locator("#sp_supplier option:checked").innerText()).trim() === supplierName, "paying from the list picks the supplier");
+  check((await acc.page.locator("form").filter({ has: acc.page.locator("#sp_supplier") }).innerText()).includes("المستحق له"), "the form shows what he is owed");
+  await acc.page.fill("#sp_amount", "12.5");
+  await acc.page.locator("label:has(input[name=method][value=cheque])").click();
+  await acc.page.fill("#sp_cheque_no", `OUT-${stamp}`);
+  await acc.page.fill("#sp_cheque_bank", "البنك العربي");
+  await acc.page.fill("#sp_cheque_due", addDaysIso(today, 30));
+  await acc.page.fill("#sp_voucher", `PV-${stamp}`);
+  await acc.page.fill("#sp_notes", `${stamp} payment`);
+  await acc.page.getByRole("button", { name: "حفظ الدفعة" }).click();
+  await acc.page.getByText("تم حفظ الدفعة رقم").waitFor({ timeout: 20000 });
+  const pvHref = await acc.page.getByRole("status").getByRole("link", { name: "طباعة سند الصرف" }).getAttribute("href");
+  check(UUID_PATH.test(pvHref ?? ""), "a cheque payment to the supplier is saved");
+
+  const pvPrint = await acc.context.newPage();
+  await pvPrint.goto(`${BASE}${pvHref}`);
+  const pvText = await pvPrint.locator("main").innerText();
+  check(pvText.includes("سند صرف") && pvText.includes(`PV-${stamp}`) && pvText.includes(supplierName) && pvText.includes("اثنا عشر دينار أردني وخمسمائة فلس"),
+    "the payment voucher prints with the supplier, its number and the amount in words");
+  await pvPrint.close();
+
+  await acc.page.locator("label:has(input[name=method][value=bank])").click();
+  await acc.page.fill("#sp_amount", "1");
+  await acc.page.fill("#sp_voucher", `PV-${stamp}`);
+  await acc.page.getByRole("button", { name: "حفظ الدفعة" }).click();
+  await acc.page.getByText(`رقم سند الصرف PV-${stamp} مستخدم مسبقاً`).waitFor({ timeout: 20000 });
+  check(true, "a payment voucher number is used once");
+
+  await acc.page.goto(`${BASE}${statementHref.split("&from=")[0]}&from=${today}&to=${today}`);
+  const supStatement = await acc.page.locator("main").innerText();
+  check(supStatement.includes(`PV-${stamp}`) && supStatement.includes(`OUT-${stamp}`) && supStatement.includes("12.500"),
+    "the supplier's statement shows the payment with its voucher and cheque numbers");
+
+  await acc.page.goto(`${BASE}/payments`);
+  const issued = acc.page.locator("tr", { hasText: `OUT-${stamp}` }).filter({ has: acc.page.locator("select[name=cheque_status]") });
+  check((await issued.count()) === 1, "the cheque waits until the bank pays it");
+  await issued.locator("select[name=cheque_status]").selectOption("cleared");
+  await issued.getByRole("button", { name: "حفظ" }).click();
+  await acc.page.locator("tr", { hasText: `OUT-${stamp}` }).filter({ has: acc.page.locator("select[name=cheque_status]") }).waitFor({ state: "detached", timeout: 20000 });
+  check((await acc.page.locator("tr", { hasText: `OUT-${stamp}` }).innerText()).includes("صُرف من البنك"), "the cheque is marked paid by the bank");
+  await acc.page.screenshot({ path: path.join(OUT, "supplier-payments.png"), fullPage: true });
+  await acc.page.locator("tr", { hasText: `OUT-${stamp}` }).getByRole("button", { name: "حذف" }).click();
+  await acc.page.locator("tr", { hasText: `OUT-${stamp}` }).waitFor({ state: "detached", timeout: 20000 });
+  check(true, "the test payment is deleted again");
+  await acc.page.goto(`${BASE}/ledger?from=${today}&to=${today}`);
+  const tbFoot3 = await acc.page.locator("tfoot td").allInnerTexts();
+  check(tbFoot3[2] === tbFoot3[3], "the trial balance still balances after paying a supplier");
+
+  const payPhone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
+  for (const url of ["/payments", "/payables"]) {
+    await payPhone.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(payPhone.page);
+    check(ok.rtl && ok.noSideScroll && !ok.loadError, `${url} fits a phone`);
+  }
+  await payPhone.context.close();
+  for (const url of ["/payments", "/payables"]) {
+    await disp.page.goto(`${BASE}${url}`);
+    check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
+  }
+
+  // 9g. Licences: the driving licence is attached on the driver form, the truck licence (number,
+  // expiry, scan) on the truck form, where it becomes the truck's registration document with its
+  // expiry countdown. Re-running replaces the same files.
+  const pdf = (name) => ({ name, mimeType: "application/pdf", buffer: Buffer.from(`%PDF-1.4\n% e2e ${name}\n%%EOF\n`) });
+  await disp.page.goto(`${BASE}/master/drivers/new`);
+  check((await disp.page.getByText("صورة رخصة القيادة").count()) === 1, "adding a driver offers to attach his licence");
+  await disp.page.goto(`${BASE}/master/trucks/new`);
+  check((await disp.page.locator("#licence_number").count()) === 1 && (await disp.page.locator("#licence_expiry").count()) === 1,
+    "adding a truck offers its licence number, expiry and scan");
+
+  await disp.page.goto(`${BASE}/master/drivers`);
+  const driverHref = await disp.page
+    .locator("tbody tr")
+    .filter({ has: disp.page.getByRole("cell", { name: driverName, exact: true }) })
+    .getByRole("link", { name: "تعديل" })
+    .first()
+    .getAttribute("href");
+  await disp.page.goto(`${BASE}${driverHref}`);
+  await disp.page.setInputFiles("input[name=photo]", pdf("driving-licence.pdf"));
+  await Promise.all([disp.page.waitForURL(/\/master\/drivers$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await disp.page.goto(`${BASE}${driverHref}`);
+  const dlHref = await disp.page.getByRole("link", { name: "عرض الرخصة المرفقة" }).getAttribute("href");
+  check((await disp.page.request.get(`${BASE}${dlHref}`, { maxRedirects: 0 })).status() === 302, "the driver's licence is attached and opens for staff");
+  await drv.page.goto(`${BASE}/my`);
+  const myLicence = await drv.page.getByRole("link", { name: "عرض رخصتي" }).getAttribute("href");
+  check(myLicence === dlHref && (await drv.page.request.get(`${BASE}${myLicence}`, { maxRedirects: 0 })).status() === 302,
+    "the driver opens his own licence from his phone");
+
+  await disp.page.goto(`${BASE}/master/trucks/${truckId}`);
+  await disp.page.fill("#licence_number", `LIC-${stamp}`);
+  await disp.page.fill("#licence_expiry", addDaysIso(today, 200));
+  await disp.page.setInputFiles("input[name=photo]", pdf("truck-licence.pdf"));
+  await Promise.all([disp.page.waitForURL(/\/master\/trucks$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await disp.page.goto(`${BASE}/trucks/${truckId}/documents`);
+  const licenceCard = disp.page.locator("li", { hasText: `LIC-${stamp}` });
+  check((await licenceCard.count()) === 1 && (await licenceCard.innerText()).includes("رخصة المركبة") && (await licenceCard.innerText()).includes("يوم متبقي"),
+    "the truck licence shows in its documents with the days left");
+  const tlHref = await licenceCard.getByRole("link", { name: "عرض النسخة الممسوحة" }).getAttribute("href");
+  check((await disp.page.request.get(`${BASE}${tlHref}`, { maxRedirects: 0 })).status() === 302, "the truck licence scan opens for staff");
+  const tlDriver = await drv.page.request.get(`${BASE}${tlHref}`, { maxRedirects: 0 });
+  check(tlDriver.status() === 404 && !tlDriver.headers()["location"], "a driver gets no link to truck documents");
+  await acc.page.goto(`${BASE}/master/trucks/${truckId}`);
+  check((await acc.page.locator("#licence_number").count()) === 0 && (await acc.page.locator("main").innerText()).includes(`LIC-${stamp}`),
+    "the accountant sees the truck licence but files no truck documents");
+
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).
   const sheetUrl = disp.page.url.bind(disp.page);

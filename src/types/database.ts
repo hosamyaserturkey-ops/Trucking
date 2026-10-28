@@ -513,6 +513,7 @@ export type Database = {
           id: string
           is_active: boolean
           license_expiry: string | null
+          license_file_path: string | null
           license_number: string | null
           national_id: string | null
           notes: string | null
@@ -528,6 +529,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           license_expiry?: string | null
+          license_file_path?: string | null
           license_number?: string | null
           national_id?: string | null
           notes?: string | null
@@ -543,6 +545,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           license_expiry?: string | null
+          license_file_path?: string | null
           license_number?: string | null
           national_id?: string | null
           notes?: string | null
@@ -736,6 +739,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "driver_settlements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "expenses_supplier_id_fkey"
@@ -956,6 +966,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "driver_settlements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "fuel_fillups_station_id_fkey"
@@ -1325,6 +1342,13 @@ export type Database = {
             foreignKeyName: "journal_lines_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -1469,6 +1493,81 @@ export type Database = {
             columns: ["truck_id"]
             isOneToOne: false
             referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_payments: {
+        Row: {
+          amount_minor: number
+          cheque_bank: string | null
+          cheque_due_date: string | null
+          cheque_no: string | null
+          cheque_status: string | null
+          cheque_status_on: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string
+          notes: string | null
+          paid_on: string
+          payment_no: number
+          reference_no: string | null
+          supplier_id: string
+          updated_at: string
+          voucher_no: string | null
+        }
+        Insert: {
+          amount_minor: number
+          cheque_bank?: string | null
+          cheque_due_date?: string | null
+          cheque_no?: string | null
+          cheque_status?: string | null
+          cheque_status_on?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method: string
+          notes?: string | null
+          paid_on: string
+          payment_no?: never
+          reference_no?: string | null
+          supplier_id: string
+          updated_at?: string
+          voucher_no?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          cheque_bank?: string | null
+          cheque_due_date?: string | null
+          cheque_no?: string | null
+          cheque_status?: string | null
+          cheque_status_on?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_on?: string
+          payment_no?: never
+          reference_no?: string | null
+          supplier_id?: string
+          updated_at?: string
+          voucher_no?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1626,6 +1725,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tires_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
           {
             foreignKeyName: "tires_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -2168,6 +2274,13 @@ export type Database = {
             foreignKeyName: "work_orders_workshop_id_fkey"
             columns: ["workshop_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "work_orders_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -2398,6 +2511,13 @@ export type Database = {
             foreignKeyName: "fuel_fillups_station_id_fkey"
             columns: ["station_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "fuel_fillups_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -2507,6 +2627,13 @@ export type Database = {
             foreignKeyName: "journal_lines_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -2549,6 +2676,7 @@ export type Database = {
           line_no: number | null
           notes: string | null
           notice_no: string | null
+          payment_no: number | null
           receipt_no: number | null
           reference_no: string | null
           reverses_entry_id: string | null
@@ -2615,6 +2743,13 @@ export type Database = {
             foreignKeyName: "journal_lines_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -2666,6 +2801,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      supplier_balance_v: {
+        Row: {
+          balance_minor: number | null
+          bought_minor: number | null
+          cheques_pending_count: number | null
+          cheques_pending_minor: number | null
+          is_active: boolean | null
+          kind: string | null
+          last_payment: string | null
+          last_purchase: string | null
+          name: string | null
+          paid_minor: number | null
+          supplier_id: string | null
+        }
+        Relationships: []
       }
       trip_profit_v: {
         Row: {

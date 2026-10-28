@@ -22,6 +22,7 @@ export type StatementLine = {
   invoice_no: number | null;
   receipt_no: number | null;
   cheque_no: string | null;
+  payment_no: number | null;
   debit_minor: number;
   credit_minor: number;
   balance_minor: number;
@@ -57,7 +58,7 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
   let q = supabase
     .from("ledger_lines_v")
     .select(
-      "id, entry_id, entry_no, entry_date, entry_description, status, source_type, source_id, reverses_entry_id, account_code, account_name, truck_code, supplier_name, driver_name, client_name, customs_declaration_no, voucher_no, notice_no, reference_no, notes, invoice_no, receipt_no, cheque_no, debit_minor, credit_minor",
+      "id, entry_id, entry_no, entry_date, entry_description, status, source_type, source_id, reverses_entry_id, account_code, account_name, truck_code, supplier_name, driver_name, client_name, customs_declaration_no, voucher_no, notice_no, reference_no, notes, invoice_no, receipt_no, cheque_no, payment_no, debit_minor, credit_minor",
     )
     .in("account_id", ids)
     .gte("entry_date", f.from)
@@ -106,6 +107,7 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
       invoice_no: l.invoice_no,
       receipt_no: l.receipt_no,
       cheque_no: l.cheque_no,
+      payment_no: l.payment_no,
       debit_minor: l.debit_minor ?? 0,
       credit_minor: l.credit_minor ?? 0,
     })),

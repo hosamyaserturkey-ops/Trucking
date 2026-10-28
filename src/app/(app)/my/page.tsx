@@ -25,7 +25,7 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
   const supabase = await createClient();
 
   const [driverRes, tripsRes, activeRes, balanceRes, expensesRes, fuelRes] = await Promise.all([
-    supabase.from("drivers").select("full_name, license_expiry, default_truck_id").maybeSingle(),
+    supabase.from("drivers").select("id, full_name, license_expiry, license_file_path, default_truck_id").maybeSingle(),
     supabase
       .from("trip_profit_v")
       .select("trip_id, trip_no, start_date, end_date, from_name, to_name, client_name, cargo_description, is_empty_return, distance_km, status")
@@ -152,6 +152,14 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
         subtitle={
           <>
             انتهاء رخصة القيادة: <span className="num">{formatDate(driver.license_expiry)}</span>
+            {driver.license_file_path ? (
+              <>
+                {" · "}
+                <a href={`/files/driver-license/${driver.id}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                  عرض رخصتي
+                </a>
+              </>
+            ) : null}
           </>
         }
       />

@@ -60,5 +60,7 @@ describe("sources", () => {
     expect(sourceLabel(null)).toBe("قيد يدوي");
     expect(sourceHref("fuel", "f1")).toBe("/diesel/f1/edit");
     expect(sourceHref("advance", "a1")).toBeNull();
+    expect(sourceLabel("issued_cheque")).toBe("شيك صادر");
+    expect(sourceHref("supplier_payment", "p1")).toBe("/print/payments/p1");
   });
 });
