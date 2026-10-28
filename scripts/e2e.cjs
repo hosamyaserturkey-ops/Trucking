@@ -684,6 +684,51 @@ async function tripAndAdvanceFlow(browser) {
     check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
   }
 
+  // 9g. Licences: the driving licence is attached on the driver form, the truck licence (number,
+  // expiry, scan) on the truck form, where it becomes the truck's registration document with its
+  // expiry countdown. Re-running replaces the same files.
+  const pdf = (name) => ({ name, mimeType: "application/pdf", buffer: Buffer.from(`%PDF-1.4\n% e2e ${name}\n%%EOF\n`) });
+  await disp.page.goto(`${BASE}/master/drivers/new`);
+  check((await disp.page.getByText("صورة رخصة القيادة").count()) === 1, "adding a driver offers to attach his licence");
+  await disp.page.goto(`${BASE}/master/trucks/new`);
+  check((await disp.page.locator("#licence_number").count()) === 1 && (await disp.page.locator("#licence_expiry").count()) === 1,
+    "adding a truck offers its licence number, expiry and scan");
+
+  await disp.page.goto(`${BASE}/master/drivers`);
+  const driverHref = await disp.page
+    .locator("tbody tr")
+    .filter({ has: disp.page.getByRole("cell", { name: driverName, exact: true }) })
+    .getByRole("link", { name: "تعديل" })
+    .first()
+    .getAttribute("href");
+  await disp.page.goto(`${BASE}${driverHref}`);
+  await disp.page.setInputFiles("input[name=photo]", pdf("driving-licence.pdf"));
+  await Promise.all([disp.page.waitForURL(/\/master\/drivers$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await disp.page.goto(`${BASE}${driverHref}`);
+  const dlHref = await disp.page.getByRole("link", { name: "عرض الرخصة المرفقة" }).getAttribute("href");
+  check((await disp.page.request.get(`${BASE}${dlHref}`, { maxRedirects: 0 })).status() === 302, "the driver's licence is attached and opens for staff");
+  await drv.page.goto(`${BASE}/my`);
+  const myLicence = await drv.page.getByRole("link", { name: "عرض رخصتي" }).getAttribute("href");
+  check(myLicence === dlHref && (await drv.page.request.get(`${BASE}${myLicence}`, { maxRedirects: 0 })).status() === 302,
+    "the driver opens his own licence from his phone");
+
+  await disp.page.goto(`${BASE}/master/trucks/${truckId}`);
+  await disp.page.fill("#licence_number", `LIC-${stamp}`);
+  await disp.page.fill("#licence_expiry", addDaysIso(today, 200));
+  await disp.page.setInputFiles("input[name=photo]", pdf("truck-licence.pdf"));
+  await Promise.all([disp.page.waitForURL(/\/master\/trucks$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await disp.page.goto(`${BASE}/trucks/${truckId}/documents`);
+  const licenceCard = disp.page.locator("li", { hasText: `LIC-${stamp}` });
+  check((await licenceCard.count()) === 1 && (await licenceCard.innerText()).includes("رخصة المركبة") && (await licenceCard.innerText()).includes("يوم متبقي"),
+    "the truck licence shows in its documents with the days left");
+  const tlHref = await licenceCard.getByRole("link", { name: "عرض النسخة الممسوحة" }).getAttribute("href");
+  check((await disp.page.request.get(`${BASE}${tlHref}`, { maxRedirects: 0 })).status() === 302, "the truck licence scan opens for staff");
+  const tlDriver = await drv.page.request.get(`${BASE}${tlHref}`, { maxRedirects: 0 });
+  check(tlDriver.status() === 404 && !tlDriver.headers()["location"], "a driver gets no link to truck documents");
+  await acc.page.goto(`${BASE}/master/trucks/${truckId}`);
+  check((await acc.page.locator("#licence_number").count()) === 0 && (await acc.page.locator("main").innerText()).includes(`LIC-${stamp}`),
+    "the accountant sees the truck licence but files no truck documents");
+
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).
   const sheetUrl = disp.page.url.bind(disp.page);

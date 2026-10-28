@@ -513,6 +513,7 @@ export type Database = {
           id: string
           is_active: boolean
           license_expiry: string | null
+          license_file_path: string | null
           license_number: string | null
           national_id: string | null
           notes: string | null
@@ -528,6 +529,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           license_expiry?: string | null
+          license_file_path?: string | null
           license_number?: string | null
           national_id?: string | null
           notes?: string | null
@@ -543,6 +545,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           license_expiry?: string | null
+          license_file_path?: string | null
           license_number?: string | null
           national_id?: string | null
           notes?: string | null

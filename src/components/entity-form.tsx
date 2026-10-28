@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import type { ReactNode } from "react";
 import type { FieldDef } from "@/lib/master-data";
+import type { UploadPurpose } from "@/lib/file-access";
 import type { SaveState } from "@/app/(app)/master/actions";
+import { useReceiptAction } from "@/components/receipt-input";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 
@@ -13,6 +15,9 @@ type Props = {
   action: (prev: SaveState, formData: FormData) => Promise<SaveState>;
   submitLabel: string;
   readOnly?: boolean;
+  /** More inputs below the fields, such as a licence; a chosen file ("photo") is uploaded first. */
+  extra?: ReactNode;
+  uploadPurpose?: UploadPurpose;
 };
 
 /** Money comes from the database in fils; the form shows dinars with 3 decimals. */
@@ -27,12 +32,13 @@ function display(field: FieldDef, value: unknown): string {
   return String(value);
 }
 
-export function EntityForm({ fields, values, refOptions, action, submitLabel, readOnly }: Props) {
-  const [state, formAction, pending] = useActionState(action, { error: null });
+export function EntityForm({ fields, values, refOptions, action, submitLabel, readOnly, extra, uploadPurpose }: Props) {
+  // Without a file input this is a plain submit; with one, the file goes to storage first.
+  const { busy, uploading, pending, error, onSubmit } = useReceiptAction(action, uploadPurpose ?? "truck_document");
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <fieldset disabled={readOnly || pending} className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <fieldset disabled={readOnly || busy} className="grid gap-4 sm:grid-cols-2">
         {fields.map((f) => {
           const id = `f-${f.name}`;
           const value = display(f, values[f.name]);
@@ -86,11 +92,12 @@ export function EntityForm({ fields, values, refOptions, action, submitLabel, re
           );
         })}
       </fieldset>
-      <FormError message={state.error} />
+      {extra ? <fieldset disabled={readOnly || busy}>{extra}</fieldset> : null}
+      <FormError message={error} />
       {readOnly ? null : (
         <div>
-          <Button type="submit" disabled={pending}>
-            {pending ? "جارٍ الحفظ…" : submitLabel}
+          <Button type="submit" disabled={busy}>
+            {uploading ? "جارٍ رفع الملف…" : pending ? "جارٍ الحفظ…" : submitLabel}
           </Button>
         </div>
       )}

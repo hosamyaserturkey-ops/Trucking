@@ -123,6 +123,15 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - **Mistakes:** delete the payment; its entries are reversed.
 - Supplier payments and balances are for the manager and the accountant.
 
+## Licences (الرخص)
+
+- **Driver form:** when adding or editing a driver, attach a scan of the driving licence (PDF or photo, up to 10 MB) next to its number and expiry. Staff open it from the driver's page; the driver opens his own from his phone (**عرض رخصتي**).
+- **Truck form:** when adding or editing a truck, enter the truck licence (رخصة المركبة) number and expiry, and attach its scan.
+  - It is saved as the truck's registration document, so it appears in the truck's documents tab with the days left, and in the 60, 30 and 7-day expiry alerts.
+  - A later edit updates the same document; the replaced scan is deleted.
+  - Truck documents are filed by the manager and the dispatcher; the accountant sees the licence on the form.
+- Files are private in R2 (`driver-documents/` and `truck-documents/`) and open through `/files/driver-license/<driver>` and `/files/truck-document/<document>`.
+
 ## Customs declarations (البيانات الجمركية)
 
 - **فتح نظام الاستفسار الجمركي:** the button opens the customs inquiry system in a new tab of the user's own browser, where they sign in with the customs broker's account. **The broker's username and password are never stored in the app.** On a declaration's row, the button also copies its number, ready to paste into the search.
@@ -278,6 +287,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   18. invoices, receipts and cheques posted as journal entries; discount allowed account (4103)
   19. customs declarations on file (PDF or photo) and the customs inquiry system link
   20. supplier payments and issued cheques posted as journal entries; discount received account (4104); supplier balances
+  21. driving licence scan on the driver
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;

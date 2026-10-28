@@ -5,9 +5,11 @@ import { requireRole } from "@/lib/auth";
 import { canSeeFinancials } from "@/lib/roles";
 import { getEntity, TRUCK_ASSETS } from "@/lib/master-data";
 import { loadRefOptions, untypedClient } from "@/lib/master-data-server";
+import { decideUpload } from "@/lib/file-access";
 import { saveEntity } from "../../actions";
 import { Card, CardBody, CardHeader, PageHeader } from "@/components/ui/card";
 import { EntityForm } from "@/components/entity-form";
+import { DriverLicenceSection, TruckLicenceSection } from "@/components/licence-fields";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -32,6 +34,32 @@ export default async function EditEntityPage({ params }: { params: Promise<{ ent
     : null;
 
   const title = (row as Record<string, unknown>)[entity.list[0]];
+
+  // Licences: the driver's scan is on his row; the truck's is its latest registration document.
+  const licence =
+    entity.key === "trucks"
+      ? (
+          await supabase
+            .from("truck_documents")
+            .select("id, doc_number, expiry_date, file_path")
+            .eq("truck_id", id)
+            .eq("doc_type", "registration")
+            .order("expiry_date", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle()
+        ).data
+      : null;
+  const extra =
+    entity.key === "drivers" ? (
+      <DriverLicenceSection fileHref={(row as { license_file_path?: string | null }).license_file_path ? `/files/driver-license/${id}` : null} />
+    ) : entity.key === "trucks" ? (
+      <TruckLicenceSection
+        number={licence?.doc_number ?? null}
+        expiry={licence?.expiry_date ?? null}
+        fileHref={licence?.file_path ? `/files/truck-document/${licence.id}` : null}
+        canAttach={canWrite && decideUpload(profile.role, "truck_document")}
+      />
+    ) : undefined;
 
   return (
     <>
@@ -63,6 +91,8 @@ export default async function EditEntityPage({ params }: { params: Promise<{ ent
               action={saveEntity.bind(null, entity.key, id)}
               submitLabel="حفظ التعديلات"
               readOnly={!canWrite}
+              extra={extra}
+              uploadPurpose={entity.key === "drivers" ? "driver_license" : "truck_document"}
             />
           </CardBody>
         </Card>
