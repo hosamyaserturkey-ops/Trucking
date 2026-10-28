@@ -285,9 +285,11 @@ export type Database = {
           issued_on: string
           method: string
           notes: string | null
+          notice_no: string | null
           settlement_id: string | null
           trip_id: string | null
           updated_at: string
+          voucher_no: string | null
         }
         Insert: {
           amount_base_minor?: number
@@ -301,9 +303,11 @@ export type Database = {
           issued_on: string
           method?: string
           notes?: string | null
+          notice_no?: string | null
           settlement_id?: string | null
           trip_id?: string | null
           updated_at?: string
+          voucher_no?: string | null
         }
         Update: {
           amount_base_minor?: number
@@ -317,9 +321,11 @@ export type Database = {
           issued_on?: string
           method?: string
           notes?: string | null
+          notice_no?: string | null
           settlement_id?: string | null
           trip_id?: string | null
           updated_at?: string
+          voucher_no?: string | null
         }
         Relationships: [
           {
@@ -552,11 +558,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          customs_declaration_no: string | null
           description: string
           driver_id: string | null
           expense_date: string
           fx_rate: number
           id: string
+          notes: string | null
+          notice_no: string | null
           payment_method: string
           receipt_path: string | null
           reference_no: string | null
@@ -570,6 +579,7 @@ export type Database = {
           trip_id: string | null
           truck_id: string | null
           updated_at: string
+          voucher_no: string | null
         }
         Insert: {
           amount_base_minor?: number
@@ -579,11 +589,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          customs_declaration_no?: string | null
           description: string
           driver_id?: string | null
           expense_date: string
           fx_rate?: number
           id?: string
+          notes?: string | null
+          notice_no?: string | null
           payment_method?: string
           receipt_path?: string | null
           reference_no?: string | null
@@ -597,6 +610,7 @@ export type Database = {
           trip_id?: string | null
           truck_id?: string | null
           updated_at?: string
+          voucher_no?: string | null
         }
         Update: {
           amount_base_minor?: number
@@ -606,11 +620,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          customs_declaration_no?: string | null
           description?: string
           driver_id?: string | null
           expense_date?: string
           fx_rate?: number
           id?: string
+          notes?: string | null
+          notice_no?: string | null
           payment_method?: string
           receipt_path?: string | null
           reference_no?: string | null
@@ -624,6 +641,7 @@ export type Database = {
           trip_id?: string | null
           truck_id?: string | null
           updated_at?: string
+          voucher_no?: string | null
         }
         Relationships: [
           {
@@ -769,6 +787,7 @@ export type Database = {
           is_full_tank: boolean
           liters: number | null
           notes: string | null
+          notice_no: string | null
           odometer: number
           payment_method: string
           qty_unit: string
@@ -785,6 +804,7 @@ export type Database = {
           truck_id: string
           unit_price_minor: number
           updated_at: string
+          voucher_no: string | null
         }
         Insert: {
           amount_base_minor?: number
@@ -799,6 +819,7 @@ export type Database = {
           is_full_tank?: boolean
           liters?: number | null
           notes?: string | null
+          notice_no?: string | null
           odometer: number
           payment_method?: string
           qty_unit?: string
@@ -815,6 +836,7 @@ export type Database = {
           truck_id: string
           unit_price_minor: number
           updated_at?: string
+          voucher_no?: string | null
         }
         Update: {
           amount_base_minor?: number
@@ -829,6 +851,7 @@ export type Database = {
           is_full_tank?: boolean
           liters?: number | null
           notes?: string | null
+          notice_no?: string | null
           odometer?: number
           payment_method?: string
           qty_unit?: string
@@ -845,6 +868,7 @@ export type Database = {
           truck_id?: string
           unit_price_minor?: number
           updated_at?: string
+          voucher_no?: string | null
         }
         Relationships: [
           {
@@ -1156,35 +1180,44 @@ export type Database = {
       journal_lines: {
         Row: {
           account_id: string
+          client_id: string | null
           created_at: string
           credit_minor: number
           debit_minor: number
           description: string | null
+          driver_id: string | null
           entry_id: string
           id: string
           line_no: number
+          supplier_id: string | null
           truck_id: string | null
         }
         Insert: {
           account_id: string
+          client_id?: string | null
           created_at?: string
           credit_minor?: number
           debit_minor?: number
           description?: string | null
+          driver_id?: string | null
           entry_id: string
           id?: string
           line_no?: number
+          supplier_id?: string | null
           truck_id?: string | null
         }
         Update: {
           account_id?: string
+          client_id?: string | null
           created_at?: string
           credit_minor?: number
           debit_minor?: number
           description?: string | null
+          driver_id?: string | null
           entry_id?: string
           id?: string
           line_no?: number
+          supplier_id?: string | null
           truck_id?: string | null
         }
         Relationships: [
@@ -1196,10 +1229,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "journal_lines_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
           {
@@ -2318,9 +2386,11 @@ export type Database = {
           account_id: string | null
           account_name: string | null
           account_type: Database["public"]["Enums"]["account_type"] | null
+          client_id: string | null
           credit_minor: number | null
           debit_minor: number | null
           description: string | null
+          driver_id: string | null
           entry_date: string | null
           entry_description: string | null
           entry_id: string | null
@@ -2329,6 +2399,7 @@ export type Database = {
           line_no: number | null
           source_type: string | null
           status: Database["public"]["Enums"]["journal_status"] | null
+          supplier_id: string | null
           truck_id: string | null
         }
         Relationships: [
@@ -2340,10 +2411,150 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "journal_lines_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["truck_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_lines_v: {
+        Row: {
+          account_code: string | null
+          account_id: string | null
+          account_name: string | null
+          account_type: Database["public"]["Enums"]["account_type"] | null
+          client_id: string | null
+          client_name: string | null
+          credit_minor: number | null
+          customs_declaration_no: string | null
+          debit_minor: number | null
+          driver_id: string | null
+          driver_name: string | null
+          entry_date: string | null
+          entry_description: string | null
+          entry_id: string | null
+          entry_no: number | null
+          id: string | null
+          line_no: number | null
+          notes: string | null
+          notice_no: string | null
+          reference_no: string | null
+          reverses_entry_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["journal_status"] | null
+          supplier_id: string | null
+          supplier_name: string | null
+          truck_code: string | null
+          truck_id: string | null
+          voucher_no: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_reverses_entry_id_fkey"
+            columns: ["reverses_entry_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_advance_balance_v"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "journal_lines_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
           {
@@ -2507,6 +2718,17 @@ export type Database = {
       }
     }
     Functions: {
+      account_balance_before: {
+        Args: {
+          p_account_ids: string[]
+          p_before: string
+          p_client_id?: string
+          p_driver_id?: string
+          p_supplier_id?: string
+          p_truck_id?: string
+        }
+        Returns: number
+      }
       cancel_invoice: {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: undefined
@@ -2536,6 +2758,19 @@ export type Database = {
       settle_driver_advance: {
         Args: { p_driver_id: string; p_notes?: string; p_settled_on?: string }
         Returns: string
+      }
+      trial_balance: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          account_id: string
+          closing_minor: number
+          code: string
+          credit_minor: number
+          debit_minor: number
+          name_ar: string
+          opening_minor: number
+          type: Database["public"]["Enums"]["account_type"]
+        }[]
       }
       truck_pnl_monthly: {
         Args: { p_from: string; p_to: string; p_truck_id: string }

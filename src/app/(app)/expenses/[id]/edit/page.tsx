@@ -15,6 +15,7 @@ import { LinkButton } from "@/components/ui/button";
 import { Card, CardBody, EmptyState, PageHeader } from "@/components/ui/card";
 import { OfficeExpenseForm } from "@/components/office-expense-form";
 import { WithdrawExpenseButton } from "@/components/driver-trip-card";
+import { JournalEntryCard } from "@/components/journal-entry-card";
 
 export const metadata: Metadata = { title: "تعديل مصروف" };
 
@@ -28,7 +29,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
   const { data: e } = await supabase
     .from("expenses")
     .select(
-      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, reference_no, receipt_path, status, settlement_id, reviewed_at",
+      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, reference_no, voucher_no, customs_declaration_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -78,6 +79,10 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
                 amount: formatMoney(e.amount_minor, e.currency, { withCurrency: false }),
                 payment_method: e.payment_method,
                 reference_no: e.reference_no,
+                voucher_no: e.voucher_no,
+                customs_declaration_no: e.customs_declaration_no,
+                notice_no: e.notice_no,
+                notes: e.notes,
                 hasReceipt: Boolean(e.receipt_path),
               }}
               action={saveOfficeExpense.bind(null, e.id)}
@@ -92,6 +97,9 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
           </CardBody>
         )}
       </Card>
+      <div className="mt-5">
+        <JournalEntryCard sourceType="expense" sourceId={e.id} />
+      </div>
     </>
   );
 }

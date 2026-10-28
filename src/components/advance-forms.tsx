@@ -99,6 +99,12 @@ export function AdvanceForm({
             <option value="bank">تحويل بنكي</option>
           </Select>
         </Field>
+        <Field label="رقم سند الصرف" htmlFor="adv_voucher">
+          <Input id="adv_voucher" name="voucher_no" dir="ltr" />
+        </Field>
+        <Field label="رقم الإشعار" htmlFor="adv_notice">
+          <Input id="adv_notice" name="notice_no" dir="ltr" />
+        </Field>
         <Field label="ملاحظة" htmlFor="adv_notes">
           <Input id="adv_notes" name="notes" />
         </Field>

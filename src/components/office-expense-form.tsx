@@ -29,6 +29,10 @@ export type ExpenseInitial = {
   amount?: string;
   payment_method?: string;
   reference_no?: string | null;
+  voucher_no?: string | null;
+  customs_declaration_no?: string | null;
+  notice_no?: string | null;
+  notes?: string | null;
   hasReceipt?: boolean;
 };
 
@@ -175,9 +179,23 @@ export function OfficeExpenseForm({
             ))}
           </Select>
         </Field>
-        <Field label="رقم المرجع / الفاتورة" htmlFor="reference_no">
+        <Field label="رقم المرجع / فاتورة المورد" htmlFor="reference_no">
           <Input id="reference_no" name="reference_no" dir="ltr" defaultValue={initial.reference_no ?? ""} />
         </Field>
+        <Field label="رقم سند الصرف" htmlFor="voucher_no" hint="من دفتر السندات؛ لا يتكرر">
+          <Input id="voucher_no" name="voucher_no" dir="ltr" defaultValue={initial.voucher_no ?? ""} />
+        </Field>
+        <Field label="رقم البيان الجمركي" htmlFor="customs_declaration_no">
+          <Input id="customs_declaration_no" name="customs_declaration_no" dir="ltr" defaultValue={initial.customs_declaration_no ?? ""} />
+        </Field>
+        <Field label="رقم الإشعار" htmlFor="notice_no" hint="إشعار البنك للتحويل أو الشيك">
+          <Input id="notice_no" name="notice_no" dir="ltr" defaultValue={initial.notice_no ?? ""} />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="ملاحظات" htmlFor="notes">
+            <Input id="notes" name="notes" defaultValue={initial.notes ?? ""} />
+          </Field>
+        </div>
         <div className="sm:col-span-2">
           <ReceiptInput hasExisting={initial.hasReceipt} label="صورة الإيصال أو الفاتورة (اختياري)" />
         </div>

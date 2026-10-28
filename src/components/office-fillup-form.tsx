@@ -25,6 +25,8 @@ export type FillupInitial = FuelQuantityInitial & {
   is_full_tank?: boolean;
   fx_rate?: string;
   payment_method?: string;
+  voucher_no?: string | null;
+  notice_no?: string | null;
   notes?: string | null;
   hasReceipt?: boolean;
 };
@@ -146,6 +148,12 @@ export function OfficeFillupForm({
               </option>
             ))}
           </Select>
+        </Field>
+        <Field label="رقم سند الصرف" htmlFor="voucher_no" hint="من دفتر السندات؛ لا يتكرر">
+          <Input id="voucher_no" name="voucher_no" dir="ltr" defaultValue={initial.voucher_no ?? ""} />
+        </Field>
+        <Field label="رقم الإشعار" htmlFor="notice_no">
+          <Input id="notice_no" name="notice_no" dir="ltr" defaultValue={initial.notice_no ?? ""} />
         </Field>
         <Field label="ملاحظة" htmlFor="notes">
           <Input id="notes" name="notes" defaultValue={initial.notes ?? ""} />

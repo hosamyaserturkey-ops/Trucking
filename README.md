@@ -75,6 +75,28 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **Totals and printing:** the sheet shows totals (loads, tons, freight) for a day or a period, filtered by truck or customer. It prints as an A4 landscape sheet with signature lines.
 - **Who can do what:** the manager and the dispatcher add, edit and delete lines; the accountant views.
 
+## Journal entries and account statements (القيود وكشف الحساب)
+
+- **Every expense, diesel fill-up, driver advance and settlement is posted automatically** as a journal entry once it counts (approved):
+
+  | What | Debit | Credit |
+  |---|---|---|
+  | Expense | its category's expense account, on the truck | how it was paid |
+  | Diesel fill-up | 5101 الديزل, on the truck | how it was paid |
+  | Advance to a driver | 1105 عهد السائقين (the driver) | cash or bank |
+  | Settlement | the difference, in cash: returned by the driver, or paid to him | 1105 or cash |
+
+  "How it was paid": cash → 1101 الصندوق; bank transfer, card or cheque → 1102 البنك; on credit → 2101 ذمم الموردين (the supplier or station); from the driver's advance → 1105 (the driver).
+- **Posted entries never change.** When an expense's amount, category, payment, date, truck or supplier changes, its entry is reversed on the same date and a new one is posted. A deleted or rejected one is reversed. Notes and document numbers don't re-post.
+- **Documents on an expense:** payment voucher number (رقم سند الصرف, typed from the paper voucher book and never used twice across expenses, fill-ups and advances), customs declaration number (رقم البيان الجمركي), bank notice number (رقم الإشعار), the supplier's invoice number and notes. Fill-ups and advances take the voucher and notice numbers.
+- **كشف الحسابات (`/ledger`):** the trial balance for a period (opening, debit, credit, closing per account). The totals always balance.
+- **كشف حساب (`/ledger/<account>`):** one account, or **all expense accounts**, for a period, optionally for one truck, supplier or driver:
+  - the opening balance, then each line with its date, entry number, description, truck or party, documents, debit, credit and the running balance (مدين / دائن);
+  - an A4 print.
+- **دفتر اليومية (`/journal`):** every entry with its lines, filtered by date and source, or one entry by its number. Each expense and fill-up page shows its entries.
+- The ledger is for the manager and the accountant only.
+- Truck profit still comes from the operations directly. Invoices and customer receipts will be posted with the invoicing screens.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -215,6 +237,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   14. daily loading sheet: customer codes, per-customer reference numbers, sheet lines without odometer
   15. customer invoicing: invoices, receipts (cash, bank, cheque, discount), customer statement and balances (screens to come)
   16. diesel by the liter, gallon (قلن) or tank (تنكة): unit, quantity and price per unit
+  17. expenses, diesel, advances and settlements posted as journal entries; voucher, customs declaration and notice numbers; account statement and trial balance
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
@@ -236,7 +259,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
 - **5:** invoicing, checks, JoFotara.
-- **6:** auto-posted journal entries, period closing.
+- **6:** posting invoices and receipts, manual journal entries, period closing.
 - **7:** payroll.
 - **8:** reports and exports.
 - **9:** hardening.
