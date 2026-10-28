@@ -112,6 +112,17 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form.
 - Invoices, receipts and customer accounts are for the manager and the accountant; company details are for the manager.
 
+## Customs declarations (البيانات الجمركية)
+
+- **فتح نظام الاستفسار الجمركي:** the button opens the customs inquiry system in a new tab of the user's own browser, where they sign in with the customs broker's account. **The broker's username and password are never stored in the app.** On a declaration's row, the button also copies its number, ready to paste into the search.
+  - The link is set under **بيانات الشركة** (https only; `https://www.customs.gov.jo` until it is changed).
+- **Attach the declaration (`/customs`):** print or save it as PDF from the customs system, then attach it here with its number, date, an optional load and notes. PDF or photo, at most 10 MB, stored in the private R2 bucket under `customs-documents/`.
+  - **فتح / طباعة** opens the file through `/files/customs/<id>` (a link that expires after 10 minutes).
+  - Search by declaration number. A declaration number typed on an expense links here.
+  - Declarations typed on expenses in the last 6 months with no file yet are listed, each with **إرفاق الملف**.
+  - The load's page lists its declarations, with **+ إرفاق بيان** filling in that load.
+- Customs declarations are for the manager, the accountant and the dispatcher; drivers never get a link to them.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -254,11 +265,12 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   16. diesel by the liter, gallon (قلن) or tank (تنكة): unit, quantity and price per unit
   17. expenses, diesel, advances and settlements posted as journal entries; voucher, customs declaration and notice numbers; account statement and trial balance
   18. invoices, receipts and cheques posted as journal entries; discount allowed account (4103)
+  19. customs declarations on file (PDF or photo) and the customs inquiry system link
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
   3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal;
-  4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (local tests; not loaded on the live demo yet).
+  4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (also loaded on the live demo).
 - **Before go-live:**
   - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries) from 1.
   - Run `truncate audit.log;`.
@@ -275,7 +287,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
 - **5:** JoFotara (Jordan e-invoicing), cheques we issue to suppliers.
-- **6:** posting invoices and receipts, manual journal entries, period closing.
+- **6:** manual journal entries, period closing.
 - **7:** payroll.
 - **8:** reports and exports.
 - **9:** hardening.

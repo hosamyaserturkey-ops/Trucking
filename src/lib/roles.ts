@@ -31,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/advances", label: "العهد", icon: "wallet", roles: STAFF_ROLES },
   { href: "/diesel", label: "الديزل", icon: "fuel", roles: STAFF_ROLES },
   { href: "/expenses", label: "المصاريف", icon: "receipt", roles: STAFF_ROLES },
+  { href: "/customs", label: "البيانات الجمركية", icon: "stamp", roles: STAFF_ROLES },
   { href: "/invoices", label: "الفواتير", icon: "invoice", roles: FINANCE_ROLES },
   { href: "/receipts", label: "المقبوضات", icon: "banknote", roles: FINANCE_ROLES },
   { href: "/receivables", label: "ذمم العملاء", icon: "handcoins", roles: FINANCE_ROLES },

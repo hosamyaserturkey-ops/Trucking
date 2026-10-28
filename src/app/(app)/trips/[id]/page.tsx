@@ -31,7 +31,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const canWrite = TRIP_WRITERS.includes(profile.role);
   const supabase = await createClient();
 
-  const [tripRes, rawRes, fuelRes, expensesRes, advancesRes] = await Promise.all([
+  const [tripRes, rawRes, fuelRes, expensesRes, advancesRes, customsRes] = await Promise.all([
     supabase.from("trip_profit_v").select("*").eq("trip_id", id).maybeSingle(),
     supabase
       .from("trips")
@@ -49,6 +49,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
       .eq("trip_id", id)
       .order("expense_date"),
     supabase.from("driver_advances").select("id, issued_on, currency, amount_minor, method, notes").eq("trip_id", id).order("issued_on"),
+    supabase.from("customs_documents").select("id, declaration_no, declaration_date").eq("trip_id", id).order("created_at"),
   ]);
   const trip = tripRes.data;
   const raw = rawRes.data;
@@ -61,6 +62,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const fuelQty = quantitySummary(fuel.filter((f) => f.status === "approved")) || "—";
   const expenses = expensesRes.data ?? [];
   const advances = advancesRes.data ?? [];
+  const customs = customsRes.data ?? [];
   const today = todayIso();
 
   const { data: overview } = await supabase.from("truck_overview_v").select("odometer").eq("truck_id", trip.truck_id!).maybeSingle();
@@ -272,6 +274,35 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
                       <span className="num">{formatDate(a.issued_on)}</span> {a.notes ? `· ${a.notes}` : ""}
                     </span>
                     <span className="num">{formatMoney(a.amount_minor, a.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card>
+            <CardHeader
+              title="البيانات الجمركية"
+              action={
+                <Link href={`/customs?trip=${id}`} className="text-sm text-primary hover:underline">
+                  + إرفاق بيان
+                </Link>
+              }
+            />
+            {customs.length === 0 ? (
+              <EmptyState>لا توجد بيانات جمركية على هذه النقلة.</EmptyState>
+            ) : (
+              <ul className="divide-y divide-border text-sm">
+                {customs.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                    <span className="num" dir="ltr">
+                      {c.declaration_no}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="num text-muted">{formatDate(c.declaration_date)}</span>
+                      <a href={`/files/customs/${c.id}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                        فتح / طباعة
+                      </a>
+                    </span>
                   </li>
                 ))}
               </ul>

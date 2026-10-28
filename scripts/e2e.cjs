@@ -565,7 +565,7 @@ async function tripAndAdvanceFlow(browser) {
   check(tbFoot2[2] === tbFoot2[3], "the trial balance still balances after invoicing, receipts and cancelling");
 
   const invPhone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
-  for (const url of ["/invoices", "/invoices/new", "/receipts", "/receivables"]) {
+  for (const url of ["/invoices", "/invoices/new", "/receipts", "/receivables", "/customs"]) {
     await invPhone.page.goto(`${BASE}${url}`);
     const ok = await layoutOk(invPhone.page);
     check(ok.rtl && ok.noSideScroll, `${url} fits a phone`);
@@ -575,6 +575,44 @@ async function tripAndAdvanceFlow(browser) {
     await disp.page.goto(`${BASE}${url}`);
     check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
   }
+
+  // 9e. Customs declarations: the inquiry system opens from the app (the broker's account stays in the
+  // user's own browser); the declaration is filed as PDF on the load, staff only. The accountant's
+  // expense above carries CD-<stamp>, so it waits under "no file" until the declaration is filed.
+  const cdCard = (title) => disp.page.locator("section", { has: disp.page.getByRole("heading", { name: title, exact: true }) });
+  const cdFiled = () => cdCard("البيانات المحفوظة").locator("tr", { hasText: `CD-${stamp}` });
+  const cdMissing = () => cdCard("بيانات مسجلة على المصاريف بلا ملف").locator("tr", { hasText: `CD-${stamp}` });
+  await disp.page.goto(`${BASE}/customs?trip=${tripId}`);
+  const portalHref = await disp.page.getByRole("link", { name: "فتح نظام الاستفسار الجمركي" }).getAttribute("href");
+  check(/^https:\/\//.test(portalHref ?? ""), "the customs inquiry system opens from the app");
+  check((await disp.page.inputValue("#trip_id")) === tripId, "attaching from a trip picks that load");
+  await disp.page.goto(`${BASE}/customs?q=CD-${stamp}`);
+  check((await cdMissing().count()) === 1, "a declaration typed on an expense waits for its file");
+  await cdMissing().getByRole("link", { name: "إرفاق الملف" }).click();
+  await disp.page.waitForURL(/declaration=/);
+  check((await disp.page.inputValue("#declaration_no")) === `CD-${stamp}`, "attaching from the list fills in the declaration number");
+  await disp.page.selectOption("#trip_id", tripId);
+  await disp.page.fill("#declaration_date", today);
+  await disp.page.setInputFiles("input[name=photo]", {
+    name: "bayan.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n% e2e customs declaration\n%%EOF\n"),
+  });
+  await Promise.all([disp.page.waitForURL(/\/customs\?saved=1/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ البيان" }).click()]);
+  await cdFiled().first().waitFor({ timeout: 20000 });
+  check((await cdFiled().count()) === 1 && (await cdMissing().count()) === 0, "the customs declaration is filed");
+  const cdHref = await cdFiled().locator("a[href^='/files/customs/']").getAttribute("href");
+  const cdOpen = await disp.page.request.get(`${BASE}${cdHref}`, { maxRedirects: 0 });
+  check(cdOpen.status() === 302, "staff open the declaration file");
+  const cdDriver = await drv.page.request.get(`${BASE}${cdHref}`, { maxRedirects: 0 });
+  check(cdDriver.status() === 404 && !cdDriver.headers()["location"], "a driver gets no link to customs documents");
+  await disp.page.goto(`${BASE}/trips/${tripId}`);
+  check((await disp.page.locator("section", { hasText: "البيانات الجمركية" }).innerText()).includes(`CD-${stamp}`), "the trip shows its customs declaration");
+  await disp.page.goto(`${BASE}/customs?q=CD-${stamp}`);
+  await cdFiled().getByRole("button", { name: "حذف" }).click();
+  await cdFiled().waitFor({ state: "detached", timeout: 20000 });
+  await cdMissing().waitFor({ timeout: 20000 });
+  check(true, "the test declaration is deleted again (its expense waits for a file again)");
 
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).

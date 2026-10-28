@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { toLatinDigits } from "@/lib/money";
 import { describeDbError } from "@/lib/master-data-parse";
+import { parsePortalUrl } from "@/lib/customs";
 
 export type CompanySaveState = { error: string | null; saved?: boolean };
 
@@ -34,6 +35,9 @@ export async function saveCompany(_prev: CompanySaveState, formData: FormData): 
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
   const v = parsed.data;
+  const portalRaw = String(formData.get("customs_portal_url") ?? "").trim();
+  const customs_portal_url = portalRaw ? parsePortalUrl(portalRaw) : null;
+  if (portalRaw && !customs_portal_url) return { error: "رابط نظام الجمارك يجب أن يبدأ بـ https://" };
   const supabase = await createClient();
   const { error } = await supabase
     .from("company_settings")
@@ -43,6 +47,7 @@ export async function saveCompany(_prev: CompanySaveState, formData: FormData): 
       address: v.address || null,
       phone: v.phone || null,
       vat_rate_pct: Number(v.vat_rate_pct),
+      customs_portal_url,
     })
     .eq("id", true);
   if (error) return { error: describeDbError(error) };

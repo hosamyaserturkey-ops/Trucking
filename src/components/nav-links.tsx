@@ -20,6 +20,7 @@ import {
   Scale,
   Settings,
   ShieldCheck,
+  Stamp,
   Store,
   Truck,
   Users,
@@ -50,6 +51,7 @@ const ICONS: Record<string, LucideIcon> = {
   banknote: Banknote,
   handcoins: HandCoins,
   settings: Settings,
+  stamp: Stamp,
 };
 
 function isActive(pathname: string, href: string) {

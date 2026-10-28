@@ -206,6 +206,7 @@ export type Database = {
           address: string | null
           base_currency: string
           company_name: string
+          customs_portal_url: string | null
           fuel_anomaly_threshold_pct: number
           id: boolean
           overhead_allocation: string
@@ -219,6 +220,7 @@ export type Database = {
           address?: string | null
           base_currency?: string
           company_name?: string
+          customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
           overhead_allocation?: string
@@ -232,6 +234,7 @@ export type Database = {
           address?: string | null
           base_currency?: string
           company_name?: string
+          customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
           overhead_allocation?: string
@@ -271,6 +274,61 @@ export type Database = {
           rate_to_base?: number | null
         }
         Relationships: []
+      }
+      customs_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          declaration_date: string | null
+          declaration_no: string
+          file_path: string
+          id: string
+          notes: string | null
+          trip_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          declaration_date?: string | null
+          declaration_no: string
+          file_path: string
+          id?: string
+          notes?: string | null
+          trip_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          declaration_date?: string | null
+          declaration_no?: string
+          file_path?: string
+          id?: string
+          notes?: string | null
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customs_documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trip_profit_v"
+            referencedColumns: ["trip_id"]
+          },
+          {
+            foreignKeyName: "customs_documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customs_documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["current_trip_id"]
+          },
+        ]
       }
       driver_advances: {
         Row: {
