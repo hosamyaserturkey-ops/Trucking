@@ -168,3 +168,16 @@ export const CHEQUE_STATUS: Record<string, { label: string; tone: Tone }> = {
   cleared: { label: "محصّل", tone: "success" },
   bounced: { label: "مرتجع", tone: "danger" },
 };
+
+export const SUPPLIER_PAYMENT_METHOD: Record<string, string> = {
+  cash: "نقداً",
+  bank: "تحويل بنكي",
+  cheque: "شيك",
+  discount: "خصم مكتسب",
+};
+
+export const ISSUED_CHEQUE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  issued: { label: "بانتظار الصرف", tone: "warning" },
+  cleared: { label: "صُرف من البنك", tone: "success" },
+  bounced: { label: "مرتجع", tone: "danger" },
+};

@@ -7,6 +7,7 @@ begin;
 
 truncate
   public.customs_documents,
+  public.supplier_payments,
   public.invoice_lines,
   public.invoices,
   public.client_receipts,

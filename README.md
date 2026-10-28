@@ -112,6 +112,17 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form.
 - Invoices, receipts and customer accounts are for the manager and the accountant; company details are for the manager.
 
+## Supplier payments (دفعات الموردين وذممهم)
+
+- **ذمم الموردين (`/payables`):** what each supplier is owed: expenses and diesel bought on credit, less what was paid, from the ledger (account 2101). It also shows cheques the bank has not paid yet and the last purchase and payment. Each supplier opens his account statement.
+- **دفعات الموردين (`/payments`):** pay a supplier in cash, by bank transfer (with its reference), with a cheque we issue (number, our bank, due date), or record a discount he gave (خصم مكتسب).
+  - **Voucher number:** the payment voucher number (رقم سند الصرف) comes from the same paper book as expenses, diesel and advances, so each number can be used once.
+  - **Posting:** Dr the supplier (2101); Cr cash 1101, bank 1102, post-dated cheques 2102, or discount received 4104.
+  - **Issued cheques:** they wait in a list by due date. Mark each one paid by the bank (Dr 2102, Cr bank) or bounced (back on the supplier).
+  - **Printing:** each payment prints as an A5 payment voucher (سند صرف).
+  - **Mistakes:** delete the payment; its entries are reversed.
+- Supplier payments and balances are for the manager and the accountant.
+
 ## Customs declarations (البيانات الجمركية)
 
 - **فتح نظام الاستفسار الجمركي:** the button opens the customs inquiry system in a new tab of the user's own browser, where they sign in with the customs broker's account. **The broker's username and password are never stored in the app.** On a declaration's row, the button also copies its number, ready to paste into the search.
@@ -266,11 +277,13 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   17. expenses, diesel, advances and settlements posted as journal entries; voucher, customs declaration and notice numbers; account statement and trial balance
   18. invoices, receipts and cheques posted as journal entries; discount allowed account (4103)
   19. customs declarations on file (PDF or photo) and the customs inquiry system link
+  20. supplier payments and issued cheques posted as journal entries; discount received account (4104); supplier balances
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
   3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal;
   4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (also loaded on the live demo).
+  5. `supabase/seed_payments.sql`: monthly payments to suppliers by transfer, a paid cheque with a discount, and cheques not paid yet.
 - **Before go-live:**
   - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries) from 1.
   - Run `truncate audit.log;`.
@@ -286,7 +299,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 ## Next phases
 
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
-- **5:** JoFotara (Jordan e-invoicing), cheques we issue to suppliers.
+- **5:** JoFotara (Jordan e-invoicing).
 - **6:** manual journal entries, period closing.
 - **7:** payroll.
 - **8:** reports and exports.
