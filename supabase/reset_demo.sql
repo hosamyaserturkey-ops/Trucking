@@ -25,7 +25,8 @@ truncate
   public.tires,
   public.service_schedules,
   public.truck_documents,
-  public.truck_assets;
+  public.truck_assets
+restart identity;
 
 update public.profiles set driver_id = null where driver_id is not null;
 delete from public.drivers;

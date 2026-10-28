@@ -19,6 +19,9 @@ export type StatementLine = {
   notice_no: string | null;
   reference_no: string | null;
   notes: string | null;
+  invoice_no: number | null;
+  receipt_no: number | null;
+  cheque_no: string | null;
   debit_minor: number;
   credit_minor: number;
   balance_minor: number;
@@ -54,7 +57,7 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
   let q = supabase
     .from("ledger_lines_v")
     .select(
-      "id, entry_id, entry_no, entry_date, entry_description, status, source_type, source_id, reverses_entry_id, account_code, account_name, truck_code, supplier_name, driver_name, client_name, customs_declaration_no, voucher_no, notice_no, reference_no, notes, debit_minor, credit_minor",
+      "id, entry_id, entry_no, entry_date, entry_description, status, source_type, source_id, reverses_entry_id, account_code, account_name, truck_code, supplier_name, driver_name, client_name, customs_declaration_no, voucher_no, notice_no, reference_no, notes, invoice_no, receipt_no, cheque_no, debit_minor, credit_minor",
     )
     .in("account_id", ids)
     .gte("entry_date", f.from)
@@ -66,6 +69,7 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
   if (f.truck) q = q.eq("truck_id", f.truck);
   if (f.supplier) q = q.eq("supplier_id", f.supplier);
   if (f.driver) q = q.eq("driver_id", f.driver);
+  if (f.client) q = q.eq("client_id", f.client);
 
   const [linesRes, openingRes] = await Promise.all([
     q,
@@ -75,6 +79,7 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
       p_truck_id: f.truck || undefined,
       p_supplier_id: f.supplier || undefined,
       p_driver_id: f.driver || undefined,
+      p_client_id: f.client || undefined,
     }),
   ]);
   const opening = Number(openingRes.data ?? 0);
@@ -98,6 +103,9 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
       notice_no: l.notice_no,
       reference_no: l.reference_no,
       notes: l.notes,
+      invoice_no: l.invoice_no,
+      receipt_no: l.receipt_no,
+      cheque_no: l.cheque_no,
       debit_minor: l.debit_minor ?? 0,
       credit_minor: l.credit_minor ?? 0,
     })),
@@ -116,15 +124,17 @@ export async function loadStatement(key: string, f: StatementFilter): Promise<St
   };
 }
 
-/** Trucks, suppliers and drivers for the statement filters. */
+/** Trucks, suppliers, drivers and customers for the statement filters. */
 export async function loadStatementParties() {
   const supabase = await createClient();
-  const [trucks, suppliers, drivers] = await Promise.all([
+  const [trucks, suppliers, drivers, clients] = await Promise.all([
     supabase.from("trucks").select("id, code").order("code"),
     supabase.from("suppliers").select("id, name").order("name"),
     supabase.from("drivers").select("id, full_name").order("full_name"),
+    supabase.from("clients").select("id, name").order("name"),
   ]);
   return {
+    clients: (clients.data ?? []).map((c) => ({ id: c.id, label: c.name })),
     trucks: (trucks.data ?? []).map((t) => ({ id: t.id, label: t.code })),
     suppliers: (suppliers.data ?? []).map((s) => ({ id: s.id, label: s.name })),
     drivers: (drivers.data ?? []).map((d) => ({ id: d.id, label: d.full_name })),

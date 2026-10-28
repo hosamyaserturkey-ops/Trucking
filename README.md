@@ -95,7 +95,22 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - an A4 print.
 - **دفتر اليومية (`/journal`):** every entry with its lines, filtered by date and source, or one entry by its number. Each expense and fill-up page shows its entries.
 - The ledger is for the manager and the accountant only.
-- Truck profit still comes from the operations directly. Invoices and customer receipts will be posted with the invoicing screens.
+- Invoices, receipts and cheques are posted too (see the next section). Truck profit still comes from the operations directly.
+
+## Invoices, receipts and customer accounts (الفواتير والذمم)
+
+- **فاتورة جديدة (`/invoices/new`):** pick a customer and a period; the finished loads not invoiced yet (loading-sheet lines and trips) are listed with their reference numbers. Tick the ones to invoice; the subtotal, sales tax and total follow the ticks.
+  - Everything is in JOD; a USD load is invoiced at the rate stored with it.
+  - Sales tax uses the company rate (16% by default, under **بيانات الشركة**) unless the customer is marked tax-exempt (**معفى من ضريبة المبيعات** on the customer).
+  - The database numbers the invoice, sets the due date from the customer's payment terms and posts it: Dr 1103 the customer, Cr 4101 transport revenue (per truck), Cr 2104 sales tax.
+- **An issued invoice never changes.** To correct one, cancel it with a reason: its entry is reversed and its loads become free to invoice again. Invoiced loads are locked on the loading sheet.
+- **The invoice prints** as an A4 tax invoice with the company and customer tax numbers, the loads, tax, total and the amount in words.
+- **المقبوضات (`/receipts`):** cash, bank transfer, cheque (number, bank, due date) or discount; each prints as a receipt voucher (سند قبض).
+  - Posting: Dr cash, bank, cheques under collection (1104) or discount allowed (4103); Cr the customer.
+  - Cheques waiting to be collected are listed by due date. Mark one deposited, cleared (moves to the bank) or bounced (back on the customer's account).
+- **ذمم العملاء (`/receivables`):** each customer's balance, the overdue part (oldest invoices paid first), cheques not collected yet and loads not invoiced yet.
+- **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form.
+- Invoices, receipts and customer accounts are for the manager and the accountant; company details are for the manager.
 
 ## Accuracy rules (enforced in the database)
 
@@ -235,16 +250,17 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   12. diesel approval and settlement, `driver_advance` payment, plausibility checks, fuel alerts
   13. reviewed expenses and fill-ups can't be deleted
   14. daily loading sheet: customer codes, per-customer reference numbers, sheet lines without odometer
-  15. customer invoicing: invoices, receipts (cash, bank, cheque, discount), customer statement and balances (screens to come)
+  15. customer invoicing: invoices, receipts (cash, bank, cheque, discount), customer statement and balances
   16. diesel by the liter, gallon (قلن) or tank (تنكة): unit, quantity and price per unit
   17. expenses, diesel, advances and settlements posted as journal entries; voucher, customs declaration and notice numbers; account statement and trial balance
+  18. invoices, receipts and cheques posted as journal entries; discount allowed account (4103)
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
   3. `supabase/seed_phase3.sql`: driver-paid diesel, approved and waiting, one of them abnormal;
   4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (local tests; not loaded on the live demo yet).
 - **Before go-live:**
-  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings.
+  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries) from 1.
   - Run `truncate audit.log;`.
   - Empty the R2 bucket `trucking-files` (demo receipt photos), and once R2 is confirmed, remove the old Supabase Storage buckets.
   - Delete the demo users in Supabase Auth.
@@ -258,7 +274,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 ## Next phases
 
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
-- **5:** invoicing, checks, JoFotara.
+- **5:** JoFotara (Jordan e-invoicing), cheques we issue to suppliers.
 - **6:** posting invoices and receipts, manual journal entries, period closing.
 - **7:** payroll.
 - **8:** reports and exports.

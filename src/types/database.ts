@@ -2474,6 +2474,7 @@ export type Database = {
           account_id: string | null
           account_name: string | null
           account_type: Database["public"]["Enums"]["account_type"] | null
+          cheque_no: string | null
           client_id: string | null
           client_name: string | null
           credit_minor: number | null
@@ -2486,9 +2487,11 @@ export type Database = {
           entry_id: string | null
           entry_no: number | null
           id: string | null
+          invoice_no: number | null
           line_no: number | null
           notes: string | null
           notice_no: string | null
+          receipt_no: number | null
           reference_no: string | null
           reverses_entry_id: string | null
           source_id: string | null

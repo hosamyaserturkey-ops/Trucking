@@ -58,7 +58,10 @@ select
   '00000000-0000-4000-8000-0000000000c4/2026-10/11111111-1111-4111-8111-111111111111.jpg'::text as own_path,
   '00000000-0000-4000-8000-0000000000c4/2026-10/22222222-2222-4222-8222-222222222222.pdf'::text as own_path2,
   '00000000-0000-4000-8000-0000000000c1/2026-10/33333333-3333-4333-8333-333333333333.jpg'::text as other_path,
-  '../00000000-0000-4000-8000-0000000000c4/x.jpg'::text as bad_path
+  '../00000000-0000-4000-8000-0000000000c4/x.jpg'::text as bad_path,
+  -- After the truck's latest fill-up (seeded ones can be later today), so the odometer order holds.
+  greatest(now(), (select max(x.filled_at) from public.fuel_fillups x where x.truck_id = d.default_truck_id) + interval '1 minute')
+    as fill_at
 from public.profiles p
 join public.drivers d on d.id = p.driver_id
 where p.user_id = '00000000-0000-4000-8000-0000000000c4';
@@ -108,11 +111,11 @@ select pg_temp.check(exists (select 1 from public.truck_documents where file_pat
   'the scan path was stored on the document');
 select pg_temp.check(pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000c4',
   format($s$insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
-            values (%L, %L, now(), 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select other_path from f))),
+            values (%L, %L, %L, 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select fill_at from f), (select other_path from f))),
   'driver cannot save a fill-up receipt from another user''s folder');
 select pg_temp.check(not pg_temp.as_user_raises('00000000-0000-4000-8000-0000000000c4',
   format($s$insert into public.fuel_fillups (truck_id, driver_id, filled_at, odometer, liters, amount_minor, payment_method, receipt_path)
-            values (%L, %L, now(), 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select own_path from f))),
+            values (%L, %L, %L, 9999999, 10, 1000, 'driver_advance', %L)$s$, (select truck_id from f), (select driver_id from f), (select fill_at from f), (select own_path from f))),
   'the same fill-up with a receipt from his own folder is accepted');
 
 -- Reviewed or settled: receipt frozen ------------------------------------------

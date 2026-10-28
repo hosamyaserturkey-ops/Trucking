@@ -12,6 +12,9 @@ export const JOURNAL_SOURCE: Record<string, string> = {
   fuel: "ديزل",
   advance: "عهدة",
   settlement: "تسوية عهدة",
+  invoice: "فاتورة",
+  receipt: "سند قبض",
+  cheque: "شيك",
   depreciation: "استهلاك",
 };
 
@@ -25,6 +28,8 @@ export function sourceHref(sourceType: string | null | undefined, sourceId: stri
   if (sourceType === "expense") return `/expenses/${sourceId}/edit`;
   if (sourceType === "fuel") return `/diesel/${sourceId}/edit`;
   if (sourceType === "settlement") return `/print/settlements/${sourceId}`;
+  if (sourceType === "invoice") return `/invoices/${sourceId}`;
+  if (sourceType === "receipt" || sourceType === "cheque") return `/print/receipts/${sourceId}`;
   return null;
 }
 
@@ -34,11 +39,12 @@ export type StatementFilter = {
   truck: string;
   supplier: string;
   driver: string;
+  client: string;
 };
 
 /** Read a statement's filters from the URL; the period defaults to this month so far. */
 export function statementFilter(
-  sp: { from?: string; to?: string; truck?: string; supplier?: string; driver?: string },
+  sp: { from?: string; to?: string; truck?: string; supplier?: string; driver?: string; client?: string },
   today: string = todayIso(),
 ): StatementFilter {
   let from = `${today.slice(0, 8)}01`;
@@ -47,7 +53,7 @@ export function statementFilter(
     [from, to] = sp.from <= sp.to ? [sp.from, sp.to] : [sp.to, sp.from];
   }
   const id = (v: string | undefined) => (v && UUID.test(v) ? v : "");
-  return { from, to, truck: id(sp.truck), supplier: id(sp.supplier), driver: id(sp.driver) };
+  return { from, to, truck: id(sp.truck), supplier: id(sp.supplier), driver: id(sp.driver), client: id(sp.client) };
 }
 
 /** The same filters as a query string, to keep them across links (print, accounts). */
@@ -56,6 +62,7 @@ export function filterQuery(f: StatementFilter): string {
   if (f.truck) q.set("truck", f.truck);
   if (f.supplier) q.set("supplier", f.supplier);
   if (f.driver) q.set("driver", f.driver);
+  if (f.client) q.set("client", f.client);
   return q.toString();
 }
 

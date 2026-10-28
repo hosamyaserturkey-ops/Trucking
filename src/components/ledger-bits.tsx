@@ -29,14 +29,16 @@ export function StatementFilters({
   trucks,
   suppliers,
   drivers,
+  clients,
 }: {
   action: string;
   filter: StatementFilter;
   trucks?: Option[];
   suppliers?: Option[];
   drivers?: Option[];
+  clients?: Option[];
 }) {
-  const select = (name: "truck" | "supplier" | "driver", label: string, options?: Option[]) =>
+  const select = (name: "truck" | "supplier" | "driver" | "client", label: string, options?: Option[]) =>
     options ? (
       <label className="flex flex-col gap-1 text-xs text-muted">
         {label}
@@ -63,6 +65,7 @@ export function StatementFilters({
       {select("truck", "الشاحنة", trucks)}
       {select("supplier", "المورد", suppliers)}
       {select("driver", "السائق", drivers)}
+      {select("client", "الزبون", clients)}
       <button type="submit" className={buttonClass("secondary")}>
         عرض
       </button>

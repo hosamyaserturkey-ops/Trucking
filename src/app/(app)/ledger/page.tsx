@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "كشف الحسابات" };
 type SearchParams = Promise<{ from?: string; to?: string; all?: string }>;
 
 // Accounts people open most, shown as shortcuts.
-const SHORTCUTS = ["1101", "1102", "1105", "2101"];
+const SHORTCUTS = ["1101", "1102", "1103", "1104", "1105", "2101"];
 
 /** Trial balance (ميزان المراجعة) for a period; each account opens its statement. */
 export default async function LedgerPage({ searchParams }: { searchParams: SearchParams }) {

@@ -149,3 +149,22 @@ export const EXPENSE_STATUS: Record<string, { label: string; tone: Tone }> = {
 };
 
 export type Tone = "neutral" | "success" | "warning" | "danger" | "info";
+
+export const INVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  issued: { label: "صادرة", tone: "success" },
+  cancelled: { label: "ملغاة", tone: "neutral" },
+};
+
+export const RECEIPT_METHOD: Record<string, string> = {
+  cash: "نقداً",
+  bank: "تحويل بنكي",
+  cheque: "شيك",
+  discount: "خصم / تسوية",
+};
+
+export const CHEQUE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  in_hand: { label: "بالصندوق", tone: "info" },
+  deposited: { label: "مودع بالبنك", tone: "warning" },
+  cleared: { label: "محصّل", tone: "success" },
+  bounced: { label: "مرتجع", tone: "danger" },
+};

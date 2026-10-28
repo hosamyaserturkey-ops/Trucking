@@ -199,10 +199,23 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                     </Td>
                     {canWrite ? (
                       <Td className="whitespace-nowrap">
-                        <Link href={`/loading/${r.id}/edit`} className="me-3 text-xs text-primary hover:underline">
-                          تعديل
-                        </Link>
-                        <DeleteLoadButton action={deleteLoad.bind(null, r.id, f.to)} label={r.ref ?? ""} />
+                        {r.invoiceId ? (
+                          // Invoiced loads are locked until the invoice is cancelled.
+                          r.invoiceNo ? (
+                            <Link href={`/invoices/${r.invoiceId}`} className="text-xs text-muted hover:underline">
+                              فاتورة {r.invoiceNo}
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-muted">مفوترة</span>
+                          )
+                        ) : (
+                          <>
+                            <Link href={`/loading/${r.id}/edit`} className="me-3 text-xs text-primary hover:underline">
+                              تعديل
+                            </Link>
+                            <DeleteLoadButton action={deleteLoad.bind(null, r.id, f.to)} label={r.ref ?? ""} />
+                          </>
+                        )}
                       </Td>
                     ) : null}
                   </Tr>

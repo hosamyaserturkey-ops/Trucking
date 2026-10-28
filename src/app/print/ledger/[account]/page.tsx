@@ -12,7 +12,7 @@ import { Amount, Balance } from "@/components/ledger-bits";
 export const metadata: Metadata = { title: "كشف حساب" };
 
 type Params = Promise<{ account: string }>;
-type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string }>;
+type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string; client?: string }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CELL = "border border-border px-2 py-1";
@@ -91,6 +91,7 @@ export default async function StatementPrintPage({ params, searchParams }: { par
               <td className={CELL}>
                 {l.description}
                 {l.status === "reversed" ? " (معكوس)" : ""}
+                {l.cheque_no ? ` · شيك ${l.cheque_no}` : ""}
               </td>
               {st.multiAccount ? <td className={`${CELL} whitespace-nowrap`}>{l.account}</td> : null}
               <td className={`${CELL} whitespace-nowrap`}>{l.party ?? ""}</td>
