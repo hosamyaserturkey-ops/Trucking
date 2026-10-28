@@ -8,13 +8,14 @@ import { AwsClient, AwsV4Signer } from "aws4fetch";
 // Layout (the database stores only the relative path <uid>/<yyyy-mm>/<uuid>.<ext>):
 //   receipts/<path>              expense and diesel receipts
 //   truck-documents/<path>       truck document scans
+//   customs-documents/<path>     customs declarations (البيان الجمركي)
 //   tmp/<kind>/<path>            fresh uploads; moved out on save, otherwise
 //                                removed by the bucket's 1-day lifecycle rule
 //
 // Kept free of "@/..." imports and of TypeScript-only syntax, so one-off
 // scripts can import it with Node's built-in type stripping.
 
-export type FileKind = "receipts" | "truck-documents";
+export type FileKind = "receipts" | "truck-documents" | "customs-documents";
 
 export const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -28,7 +29,7 @@ export const UPLOAD_TTL_SECONDS = 300;
 export const VIEW_TTL_SECONDS = 600;
 export const VIEW_TTL_MAX_SECONDS = 1800;
 
-const KINDS: FileKind[] = ["receipts", "truck-documents"];
+const KINDS: FileKind[] = ["receipts", "truck-documents", "customs-documents"];
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const PATH = new RegExp(`^(${UUID})/(\\d{4}-(?:0[1-9]|1[0-2]))/(${UUID})\\.(jpg|png|webp|heic|pdf)$`);
 
@@ -226,7 +227,7 @@ export async function attachUpload(kind: FileKind, userId: string, uploadKey: st
 
 /** Remove a fresh upload (after its copy was saved, or when abandoning it). */
 export async function discardUpload(uploadKey: string): Promise<void> {
-  if (!/^tmp\/(receipts|truck-documents)\//.test(uploadKey) || uploadKey.includes("..")) {
+  if (!/^tmp\/(receipts|truck-documents|customs-documents)\//.test(uploadKey) || uploadKey.includes("..")) {
     throw new StorageError("path", "Not an upload key");
   }
   const res = await call("DELETE", uploadKey);

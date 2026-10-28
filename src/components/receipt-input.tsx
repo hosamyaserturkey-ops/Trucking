@@ -44,8 +44,19 @@ export function useReceiptAction(
   return { state, pending, uploading, busy: pending || uploading, error: uploadError ?? state.error, onSubmit };
 }
 
-/** Camera/file picker with a preview. The file goes out as the "photo" field. */
-export function ReceiptInput({ hasExisting = false, label = "صورة الإيصال" }: { hasExisting?: boolean; label?: string }) {
+/**
+ * Camera/file picker with a preview. The file goes out as the "photo" field.
+ * `document` picks a file (a PDF or a photo) instead of opening the camera.
+ */
+export function ReceiptInput({
+  hasExisting = false,
+  label = "صورة الإيصال",
+  document = false,
+}: {
+  hasExisting?: boolean;
+  label?: string;
+  document?: boolean;
+}) {
   const [preview, setPreview] = useState<{ url: string; isImage: boolean; name: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -77,13 +88,13 @@ export function ReceiptInput({ hasExisting = false, label = "صورة الإيص
       ) : null}
       <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted hover:bg-surface-2">
         <Camera className="size-5" aria-hidden />
-        {preview ? "تغيير الصورة" : hasExisting ? "استبدال الصورة المرفقة" : "تصوير الإيصال"}
+        {document ? (preview ? "تغيير الملف" : "اختيار الملف") : preview ? "تغيير الصورة" : hasExisting ? "استبدال الصورة المرفقة" : "تصوير الإيصال"}
         <input
           ref={fileRef}
           name="photo"
           type="file"
           accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,image/*"
-          capture="environment"
+          capture={document ? undefined : "environment"}
           className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];

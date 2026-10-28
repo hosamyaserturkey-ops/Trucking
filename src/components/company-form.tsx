@@ -5,7 +5,14 @@ import type { CompanySaveState } from "@/app/(app)/settings/company/actions";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/form";
 
-type Values = { company_name: string; tax_number: string | null; address: string | null; phone: string | null; vat_rate_pct: number };
+type Values = {
+  company_name: string;
+  tax_number: string | null;
+  address: string | null;
+  phone: string | null;
+  vat_rate_pct: number;
+  customs_portal_url: string | null;
+};
 
 export function CompanyForm({ action, initial }: { action: (prev: CompanySaveState, formData: FormData) => Promise<CompanySaveState>; initial: Values }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
@@ -26,6 +33,9 @@ export function CompanyForm({ action, initial }: { action: (prev: CompanySaveSta
         </Field>
         <Field label="نسبة ضريبة المبيعات (%)" htmlFor="vat_rate_pct" hint="تُطبّق على الفواتير الجديدة فقط؛ الزبون المعفى لا تُضاف عليه">
           <Input id="vat_rate_pct" name="vat_rate_pct" inputMode="decimal" dir="ltr" defaultValue={String(initial.vat_rate_pct)} required />
+        </Field>
+        <Field label="رابط نظام الاستفسار الجمركي" htmlFor="customs_portal_url" hint="يفتحه زر «فتح نظام الاستفسار الجمركي»؛ الصق رابط صفحة الدخول بالضبط">
+          <Input id="customs_portal_url" name="customs_portal_url" dir="ltr" defaultValue={initial.customs_portal_url ?? ""} placeholder="https://" />
         </Field>
       </div>
       <FormError message={state.error} />

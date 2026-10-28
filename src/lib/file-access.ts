@@ -6,16 +6,17 @@ import { attachUpload, createUploadLink, deleteFile, discardUpload, StorageError
 // Who may upload or view which file. Every row lookup uses the signed-in
 // user's own Supabase session, so row-level security decides what they see.
 
-export type UploadPurpose = "expense_receipt" | "fuel_receipt" | "truck_document";
-export type ViewKind = "expense" | "fuel" | "truck-document";
+export type UploadPurpose = "expense_receipt" | "fuel_receipt" | "truck_document" | "customs_document";
+export type ViewKind = "expense" | "fuel" | "truck-document" | "customs";
 
-export const UPLOAD_PURPOSES: UploadPurpose[] = ["expense_receipt", "fuel_receipt", "truck_document"];
-export const VIEW_KINDS: ViewKind[] = ["expense", "fuel", "truck-document"];
+export const UPLOAD_PURPOSES: UploadPurpose[] = ["expense_receipt", "fuel_receipt", "truck_document", "customs_document"];
+export const VIEW_KINDS: ViewKind[] = ["expense", "fuel", "truck-document", "customs"];
 
 export const PURPOSE_KIND: Record<UploadPurpose, FileKind> = {
   expense_receipt: "receipts",
   fuel_receipt: "receipts",
   truck_document: "truck-documents",
+  customs_document: "customs-documents",
 };
 
 // Same roles that may write the rows (RLS) and the old Supabase bucket policies.
@@ -23,6 +24,7 @@ const UPLOAD_ROLES: Record<UploadPurpose, AppRole[]> = {
   expense_receipt: ["driver", "manager", "accountant"],
   fuel_receipt: ["driver", "manager", "accountant", "dispatcher"],
   truck_document: ["manager", "dispatcher"],
+  customs_document: ["manager", "accountant", "dispatcher"],
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,6 +68,10 @@ async function loadRecord(purpose: UploadPurpose, id: string): Promise<RecordSta
   if (purpose === "fuel_receipt") {
     const { data } = await supabase.from("fuel_fillups").select("driver_id, reviewed_at, settlement_id").eq("id", id).maybeSingle();
     return data;
+  }
+  if (purpose === "customs_document") {
+    const { data } = await supabase.from("customs_documents").select("id").eq("id", id).maybeSingle();
+    return data ? {} : null;
   }
   const { data } = await supabase.from("truck_documents").select("id").eq("id", id).maybeSingle();
   return data ? {} : null;
@@ -119,6 +125,10 @@ export async function loadFileRow(kind: ViewKind, id: string): Promise<{ kind: F
   if (kind === "fuel") {
     const { data } = await supabase.from("fuel_fillups").select("receipt_path").eq("id", id).maybeSingle();
     return data?.receipt_path ? { kind: "receipts", path: data.receipt_path } : null;
+  }
+  if (kind === "customs") {
+    const { data } = await supabase.from("customs_documents").select("file_path").eq("id", id).maybeSingle();
+    return data?.file_path ? { kind: "customs-documents", path: data.file_path } : null;
   }
   const { data } = await supabase.from("truck_documents").select("file_path").eq("id", id).maybeSingle();
   return data?.file_path ? { kind: "truck-documents", path: data.file_path } : null;

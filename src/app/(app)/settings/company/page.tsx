@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "بيانات الشركة" };
 export default async function CompanyPage() {
   await requireRole("manager");
   const supabase = await createClient();
-  const { data } = await supabase.from("company_settings").select("company_name, tax_number, address, phone, vat_rate_pct").maybeSingle();
+  const { data } = await supabase.from("company_settings").select("company_name, tax_number, address, phone, vat_rate_pct, customs_portal_url").maybeSingle();
   return (
     <>
       <PageHeader title="بيانات الشركة" subtitle="تظهر على الفواتير وسندات القبض وكشوف الحساب" />
@@ -25,6 +25,7 @@ export default async function CompanyPage() {
               address: data?.address ?? null,
               phone: data?.phone ?? null,
               vat_rate_pct: Number(data?.vat_rate_pct ?? 16),
+              customs_portal_url: data?.customs_portal_url ?? null,
             }}
           />
         </CardBody>

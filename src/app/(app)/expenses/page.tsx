@@ -220,7 +220,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
                         <span dir="ltr">{e.voucher_no ?? ""}</span>
                       </Td>
                       <Td className="num whitespace-nowrap">
-                        <span dir="ltr">{e.customs_declaration_no ?? ""}</span>
+                        {e.customs_declaration_no ? (
+                          <Link href={`/customs?q=${encodeURIComponent(e.customs_declaration_no)}`} className="hover:underline" dir="ltr">
+                            {e.customs_declaration_no}
+                          </Link>
+                        ) : null}
                       </Td>
                       <Td className="num text-end whitespace-nowrap">{formatMoney(e.amount_minor, e.currency)}</Td>
                       <Td className="num text-end whitespace-nowrap">{formatMoney(e.amount_base_minor, "JOD", { withCurrency: false })}</Td>

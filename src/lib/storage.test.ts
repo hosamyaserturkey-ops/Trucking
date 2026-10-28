@@ -75,6 +75,7 @@ describe("paths and keys", () => {
   });
   it("prefixes keys by kind and refuses invalid paths", () => {
     expect(objectKey("receipts", PATH)).toBe(`receipts/${PATH}`);
+    expect(objectKey("customs-documents", PATH)).toBe(`customs-documents/${PATH}`);
     expect(tmpKey("truck-documents", PATH)).toBe(`tmp/truck-documents/${PATH}`);
     expect(code(() => objectKey("receipts", "../etc/passwd"))).toBe("path");
     expect(code(() => objectKey("other" as never, PATH))).toBe("path");
