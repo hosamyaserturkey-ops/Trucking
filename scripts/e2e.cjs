@@ -491,6 +491,91 @@ async function tripAndAdvanceFlow(browser) {
     check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
   }
 
+  // 9d. Invoicing: the finished trip from step 2 is invoiced with sales tax, paid by a cheque that
+  // bounces, then the invoice is cancelled so the load is free again.
+  await acc.page.goto(`${BASE}/trips/${tripId}`);
+  const tripClient = (await acc.page.locator("dt", { hasText: "العميل" }).locator("xpath=following-sibling::dd").innerText()).trim();
+  const addDaysIso = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+  await acc.page.goto(`${BASE}/invoices/new`);
+  const clientValue = await acc.page.locator("select[name=client] option").filter({ hasText: tripClient }).first().getAttribute("value");
+  await acc.page.goto(`${BASE}/invoices/new?client=${clientValue}&from=${addDaysIso(today, -3)}&to=${today}`);
+  const draftRow = acc.page.locator("tbody tr", { hasText: stamp });
+  check((await draftRow.count()) === 1, "the finished trip waits to be invoiced");
+  await acc.page.getByLabel("تحديد الكل").uncheck();
+  await draftRow.locator("input[name=trip_id]").check();
+  const totalsText = await acc.page.locator("dl[aria-live]").innerText();
+  check(totalsText.includes("640.000") && totalsText.includes("102.400") && totalsText.includes("742.400"),
+    "the draft adds 16% sales tax: 640.000 + 102.400 = 742.400");
+  await Promise.all([
+    acc.page.waitForURL(/\/invoices\/[0-9a-f-]{36}\?issued=1/, { timeout: 30000 }),
+    acc.page.getByRole("button", { name: "إصدار الفاتورة" }).click(),
+  ]);
+  const invoiceUrl = acc.page.url().split("?")[0];
+  const invText = await acc.page.locator("main").innerText();
+  check(invText.includes("742.400") && invText.includes("سبعمائة واثنان وأربعون دينار أردني وأربعمائة فلس"),
+    "the invoice shows its total and the amount in words");
+  const invEntry = await acc.page.locator("section", { hasText: "القيد المحاسبي" }).innerText();
+  check(invEntry.includes("ذمم العملاء") && invEntry.includes("إيرادات النقل") && invEntry.includes("ضريبة المبيعات المستحقة") && invEntry.includes("102.400"),
+    "the invoice is posted: Dr customers, Cr revenue and sales tax");
+  await acc.page.screenshot({ path: path.join(OUT, "invoice.png"), fullPage: true });
+  const invPrint = await acc.context.newPage();
+  await invPrint.goto(`${BASE}/print/invoices/${invoiceUrl.split("/").pop()}`);
+  const invPrintText = await invPrint.locator("main").innerText();
+  check(invPrintText.includes("فاتورة ضريبية") && invPrintText.includes("742.400") && invPrintText.includes(stamp), "the tax invoice prints with its loads");
+  await invPrint.pdf({ path: path.join(OUT, "invoice.pdf"), format: "A4", printBackground: true });
+  await invPrint.close();
+
+  await acc.page.goto(`${BASE}/receivables/${clientValue}`);
+  check((await acc.page.locator("tbody tr", { hasText: "فاتورة رقم" }).last().innerText()).includes("742.400"), "the customer statement shows the invoice as a debit");
+  await acc.page.locator("label:has(input[name=method][value=cheque])").click();
+  await acc.page.fill("#rc_amount", "742.4");
+  await acc.page.fill("#rc_cheque_no", `CH-${stamp}`);
+  await acc.page.fill("#rc_cheque_bank", "البنك العربي");
+  await acc.page.fill("#rc_cheque_due", addDaysIso(today, 10));
+  await acc.page.getByRole("button", { name: "حفظ سند القبض" }).click();
+  await acc.page.getByText("تم حفظ سند القبض رقم").waitFor({ timeout: 20000 });
+  check(true, "a cheque is received from the customer");
+
+  await acc.page.goto(`${BASE}/receipts`);
+  const pendingCheque = acc.page.locator("tr", { hasText: `CH-${stamp}` }).filter({ has: acc.page.locator("select[name=cheque_status]") });
+  check((await pendingCheque.count()) === 1, "the cheque waits under collection");
+  await pendingCheque.locator("select[name=cheque_status]").selectOption("bounced");
+  await pendingCheque.getByRole("button", { name: "حفظ" }).click();
+  await acc.page.locator("tr", { hasText: `CH-${stamp}` }).filter({ has: acc.page.locator("select[name=cheque_status]") }).waitFor({ state: "detached", timeout: 20000 });
+  check(true, "the cheque is marked bounced");
+  await acc.page.goto(`${BASE}/receivables/${clientValue}`);
+  check((await acc.page.locator("tbody tr", { hasText: "شيك مرتجع" }).count()) >= 1, "the bounced cheque is back on the customer's statement");
+  await acc.page.screenshot({ path: path.join(OUT, "customer-statement.png"), fullPage: true });
+
+  await acc.page.goto(invoiceUrl);
+  await acc.page.getByRole("button", { name: "إلغاء الفاتورة" }).click();
+  await acc.page.fill("#reason", "e2e: فاتورة تجريبية");
+  await acc.page.getByRole("button", { name: "تأكيد الإلغاء" }).click();
+  // Once cancelled, the page shows when and why instead of the cancel form.
+  await acc.page.getByText("أُلغيت في").waitFor({ timeout: 20000 });
+  check((await acc.page.locator("main").innerText()).includes("ملغاة"), "the invoice is cancelled with its reason");
+  await acc.page.goto(`${BASE}/invoices/new?client=${clientValue}&from=${addDaysIso(today, -3)}&to=${today}`);
+  check((await acc.page.locator("tbody tr", { hasText: stamp }).count()) === 1, "after cancelling, the trip can be invoiced again");
+  await acc.page.goto(`${BASE}/receipts`);
+  await acc.page.locator("tr", { hasText: `CH-${stamp}` }).getByRole("button", { name: "حذف" }).click();
+  await acc.page.locator("tr", { hasText: `CH-${stamp}` }).waitFor({ state: "detached", timeout: 20000 });
+  check(true, "the test receipt is deleted again");
+  await acc.page.goto(`${BASE}/ledger?from=${today}&to=${today}`);
+  const tbFoot2 = await acc.page.locator("tfoot td").allInnerTexts();
+  check(tbFoot2[2] === tbFoot2[3], "the trial balance still balances after invoicing, receipts and cancelling");
+
+  const invPhone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
+  for (const url of ["/invoices", "/invoices/new", "/receipts", "/receivables"]) {
+    await invPhone.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(invPhone.page);
+    check(ok.rtl && ok.noSideScroll, `${url} fits a phone`);
+  }
+  await invPhone.context.close();
+  for (const url of ["/invoices", "/receipts", "/receivables"]) {
+    await disp.page.goto(`${BASE}${url}`);
+    check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
+  }
+
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).
   const sheetUrl = disp.page.url.bind(disp.page);

@@ -5,7 +5,7 @@ const TRUCK = "11111111-1111-4111-8111-111111111111";
 
 describe("statementFilter", () => {
   it("defaults to this month so far", () => {
-    expect(statementFilter({}, "2026-10-27")).toEqual({ from: "2026-10-01", to: "2026-10-27", truck: "", supplier: "", driver: "" });
+    expect(statementFilter({}, "2026-10-27")).toEqual({ from: "2026-10-01", to: "2026-10-27", truck: "", supplier: "", driver: "", client: "" });
   });
   it("takes a period (swapped if needed) and valid ids only", () => {
     expect(statementFilter({ from: "2026-10-20", to: "2026-09-01", truck: TRUCK, driver: "x" }, "2026-10-27")).toMatchObject({

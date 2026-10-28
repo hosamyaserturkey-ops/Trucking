@@ -3,18 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Banknote,
   BookOpen,
   BookText,
   Building2,
   CircleCheck,
   ClipboardList,
+  FileText,
   Fuel,
+  HandCoins,
   History,
   List,
   MapPin,
   Receipt,
   Route,
   Scale,
+  Settings,
   ShieldCheck,
   Store,
   Truck,
@@ -42,6 +46,10 @@ const ICONS: Record<string, LucideIcon> = {
   receipt: Receipt,
   scale: Scale,
   journal: BookText,
+  invoice: FileText,
+  banknote: Banknote,
+  handcoins: HandCoins,
+  settings: Settings,
 };
 
 function isActive(pathname: string, href: string) {

@@ -31,6 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/advances", label: "العهد", icon: "wallet", roles: STAFF_ROLES },
   { href: "/diesel", label: "الديزل", icon: "fuel", roles: STAFF_ROLES },
   { href: "/expenses", label: "المصاريف", icon: "receipt", roles: STAFF_ROLES },
+  { href: "/invoices", label: "الفواتير", icon: "invoice", roles: FINANCE_ROLES },
+  { href: "/receipts", label: "المقبوضات", icon: "banknote", roles: FINANCE_ROLES },
+  { href: "/receivables", label: "ذمم العملاء", icon: "handcoins", roles: FINANCE_ROLES },
   { href: "/ledger", label: "كشف الحسابات", icon: "scale", roles: FINANCE_ROLES },
   { href: "/journal", label: "دفتر اليومية", icon: "journal", roles: FINANCE_ROLES },
   { href: "/my", label: "رحلاتي", icon: "route", roles: ["driver"] },
@@ -42,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/master/accounts", label: "دليل الحسابات", icon: "book", roles: FINANCE_ROLES },
   { href: "/master/expense_categories", label: "أنواع المصاريف", icon: "list", roles: FINANCE_ROLES },
   { href: "/settings/users", label: "المستخدمون", icon: "shield", roles: ["manager"] },
+  { href: "/settings/company", label: "بيانات الشركة", icon: "settings", roles: ["manager"] },
   { href: "/audit", label: "سجل التدقيق", icon: "history", roles: ["manager"] },
 ];
 

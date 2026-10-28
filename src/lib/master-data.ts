@@ -110,6 +110,7 @@ export const ENTITIES: Record<EntityKey, EntityDef> = {
         hint: "2–6 أحرف إنجليزية أو أرقام، مثل ARB. تبدأ به أرقام الإشارة لنقلات هذا الزبون (ARB-0001)",
       },
       { name: "tax_number", label: "الرقم الضريبي", type: "text", ltr: true },
+      { name: "vat_exempt", label: "معفى من ضريبة المبيعات", type: "bool", hint: "فواتيره بدون ضريبة" },
       { name: "phone", label: "الهاتف", type: "text", ltr: true },
       { name: "email", label: "البريد الإلكتروني", type: "text", ltr: true },
       { name: "city", label: "المدينة", type: "text" },

@@ -19,6 +19,9 @@ export type SheetRow = {
   freightBaseMinor: number;
   docNo: string | null;
   notes: string | null;
+  /** Set once the load is on an invoice; it can't be edited or deleted then. */
+  invoiceId: string | null;
+  invoiceNo: number | null; // only finance roles can see invoices
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -50,7 +53,7 @@ export async function loadSheetRows(f: SheetFilter): Promise<SheetRow[]> {
   let query = supabase
     .from("trips")
     .select(
-      "id, client_ref, start_date, cargo_description, cargo_weight_tons, currency, freight_minor, freight_base_minor, client_doc_no, notes, truck:trucks(code), driver:drivers(full_name), client:clients(name), from_loc:locations!trips_from_location_id_fkey(name), to_loc:locations!trips_to_location_id_fkey(name)",
+      "id, client_ref, start_date, cargo_description, cargo_weight_tons, currency, freight_minor, freight_base_minor, client_doc_no, notes, invoice_id, invoice:invoices!trips_invoice_id_fkey(invoice_no), truck:trucks(code), driver:drivers(full_name), client:clients(name), from_loc:locations!trips_from_location_id_fkey(name), to_loc:locations!trips_to_location_id_fkey(name)",
     )
     .eq("entry_source", "sheet")
     .gte("start_date", f.from)
@@ -77,5 +80,7 @@ export async function loadSheetRows(f: SheetFilter): Promise<SheetRow[]> {
     freightBaseMinor: r.freight_base_minor,
     docNo: r.client_doc_no,
     notes: r.notes,
+    invoiceId: r.invoice_id,
+    invoiceNo: (r.invoice as { invoice_no: number } | null)?.invoice_no ?? null,
   }));
 }

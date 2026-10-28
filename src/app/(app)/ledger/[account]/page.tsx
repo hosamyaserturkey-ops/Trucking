@@ -5,7 +5,7 @@ import { ChevronRight, Printer } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { filterQuery, sourceHref, statementFilter } from "@/lib/ledger";
-import { loadStatement, loadStatementParties } from "@/lib/ledger-data";
+import { loadStatement, loadStatementParties, type StatementLine } from "@/lib/ledger-data";
 import { formatDate, formatInt } from "@/lib/format";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
@@ -16,14 +16,17 @@ import { Amount, Balance, StatementFilters } from "@/components/ledger-bits";
 export const metadata: Metadata = { title: "كشف حساب" };
 
 type Params = Promise<{ account: string }>;
-type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string }>;
+type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string; client?: string }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** One account (or all expense accounts) over a period: opening, every line with its documents, running balance. */
 /** The paper documents behind a line, one per row, labelled. */
-function DocNumbers({ line }: { line: { customs_declaration_no: string | null; voucher_no: string | null; notice_no: string | null } }) {
-  const docs: [string, string | null][] = [
+function DocNumbers({ line }: { line: StatementLine }) {
+  const docs: [string, string | number | null][] = [
+    ["فاتورة", line.invoice_no],
+    ["سند قبض", line.receipt_no],
+    ["شيك", line.cheque_no],
     ["بيان جمركي", line.customs_declaration_no],
     ["سند صرف", line.voucher_no],
     ["إشعار", line.notice_no],
