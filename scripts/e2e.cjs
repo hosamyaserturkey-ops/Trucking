@@ -12,6 +12,26 @@
 // Uses the Playwright that is installed globally; `npx playwright` works too.
 const { chromium } = require("playwright");
 const fs = require("node:fs");
+const { strToU8, zipSync } = require("fflate");
+
+/** A one-sheet .xlsx with text cells, as a spreadsheet program would save it (for the import check). */
+function xlsxBuffer(rows) {
+  const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const col = (i) => String.fromCharCode(65 + i);
+  const data = rows
+    .map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => (v === "" ? "" : `<c r="${col(ci)}${ri + 1}" t="inlineStr"><is><t>${esc(v)}</t></is></c>`)).join("")}</row>`)
+    .join("");
+  const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+  return Buffer.from(
+    zipSync({
+      "[Content_Types].xml": strToU8(`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`),
+      "_rels/.rels": strToU8(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`),
+      "xl/workbook.xml": strToU8(`<workbook xmlns="${ns}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="S" sheetId="1" r:id="rId1"/></sheets></workbook>`),
+      "xl/_rels/workbook.xml.rels": strToU8(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`),
+      "xl/worksheets/sheet1.xml": strToU8(`<worksheet xmlns="${ns}"><sheetData>${data}</sheetData></worksheet>`),
+    }),
+  );
+}
 const path = require("node:path");
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -728,6 +748,110 @@ async function tripAndAdvanceFlow(browser) {
   await acc.page.goto(`${BASE}/master/trucks/${truckId}`);
   check((await acc.page.locator("#licence_number").count()) === 0 && (await acc.page.locator("main").innerText()).includes(`LIC-${stamp}`),
     "the accountant sees the truck licence but files no truck documents");
+
+  // 9h. Opening balances and the Excel import. Only on a system with no opening date yet (it is a
+  // one-time setup; real balances are never touched): set the date, enter balances, a cheque and an
+  // advance, import a supplier's opening balance from a sheet, then remove everything again.
+  await acc.page.goto(`${BASE}/opening`);
+  if (await acc.page.inputValue("#opening_date")) {
+    console.log("SKIP  opening balances (an opening date is already set on this system)");
+  } else {
+    await acc.page.fill("#opening_date", today);
+    await acc.page.getByRole("button", { name: "حفظ التاريخ" }).click();
+    await acc.page.locator("#ob_acc_target").waitFor({ timeout: 20000 });
+    check(true, "the accountant sets the opening date");
+
+    const saveBalance = async (prefix, label, amount) => {
+      await acc.page.selectOption(`#${prefix}_target`, { label });
+      await acc.page.fill(`#${prefix}_amount`, amount);
+      await acc.page.locator("form").filter({ has: acc.page.locator(`#${prefix}_target`) }).getByRole("button", { name: "حفظ الرصيد" }).click();
+    };
+    const cashLabel = (await acc.page.locator("#ob_acc_target option").filter({ hasText: "1101" }).first().innerText()).trim();
+    await saveBalance("ob_acc", cashLabel, "1000");
+    await acc.page.locator("section", { hasText: "الحسابات" }).locator("tbody tr", { hasText: "1101" }).waitFor({ timeout: 20000 });
+    await saveBalance("ob_cl", tripClient, "2500");
+    await acc.page.locator("section", { hasText: "أرصدة العملاء" }).locator("tbody tr", { hasText: tripClient }).waitFor({ timeout: 20000 });
+    await acc.page.fill("#oa_amount", "75");
+    await acc.page.selectOption("#oa_driver", { label: driverName });
+    await acc.page.getByRole("button", { name: "إضافة العهدة" }).click();
+    await acc.page.locator("section", { hasText: "عهد السائقين المفتوحة" }).locator("tbody tr", { hasText: driverName }).waitFor({ timeout: 20000 });
+    await acc.page.selectOption("#oc_in_party", { label: tripClient });
+    await acc.page.fill("#oc_in_no", `OB-${stamp}`);
+    await acc.page.fill("#oc_in_due", addDaysIso(today, 20));
+    await acc.page.fill("#oc_in_amount", "400");
+    await acc.page.locator("form").filter({ has: acc.page.locator("#oc_in_no") }).getByRole("button", { name: "إضافة الشيك" }).click();
+    await acc.page.locator("tr", { hasText: `OB-${stamp}` }).waitFor({ timeout: 20000 });
+    const openingText = await acc.page.locator("main").innerText();
+    check(/قيد \d+/.test(openingText) && openingText.includes("3,500"), "balances, an advance and a cheque are entered; capital takes the difference (1,000 + 2,500)");
+
+    await acc.page.goto(`${BASE}/receivables/${clientValue}?from=${today}&to=${today}`);
+    const stmt = await acc.page.locator("main").innerText();
+    check(stmt.includes("رصيد افتتاحي") && stmt.includes("2,500.000"), "the customer's statement starts with his opening balance");
+    await acc.page.goto(`${BASE}/receipts`);
+    check((await acc.page.locator("tr", { hasText: `OB-${stamp}` }).filter({ has: acc.page.locator("select[name=cheque_status]") }).count()) === 1,
+      "his cheque in hand waits under collection");
+
+    // The import: template download, a sheet with an error is refused, then an opening balance only.
+    await acc.page.goto(`${BASE}/import`);
+    await acc.page.selectOption("#import_type", "suppliers");
+    const [download] = await Promise.all([acc.page.waitForEvent("download"), acc.page.getByRole("button", { name: /تنزيل قالب/ }).click()]);
+    const templateBytes = fs.readFileSync(await download.path());
+    check(templateBytes.subarray(0, 2).toString() === "PK" && /\.xlsx$/.test(download.suggestedFilename()), "the Excel template downloads");
+    await acc.page.goto(`${BASE}/opening`);
+    const supplierName = (await acc.page.locator("#ob_sp_target option").nth(1).innerText()).trim();
+    const head = ["الاسم *", "النوع (محطة وقود/ورشة/قطع غيار/إطارات/أخرى) *", "الهاتف", "الرقم الضريبي", "المدينة", "العنوان", "الرصيد الافتتاحي (موجب = له)"];
+    await acc.page.goto(`${BASE}/import`);
+    await acc.page.selectOption("#import_type", "suppliers");
+    await acc.page.setInputFiles("[data-testid=import-file]", {
+      name: "suppliers.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: xlsxBuffer([head, [supplierName, "محطة وقود", "", "", "", "", "300"], [`e2e-${stamp} مورد جديد`, "ورشة"], [`e2e-${stamp} خطأ`, "مطعم"]]),
+    });
+    await acc.page.getByText("أخطاء:").waitFor({ timeout: 30000 });
+    const previewText = await acc.page.locator("main").innerText();
+    check(previewText.includes("رصيد افتتاحي فقط") && previewText.includes("جديد") && previewText.includes("قيمة غير مسموحة في «النوع»")
+      && (await acc.page.getByRole("button", { name: "صحح الأخطاء أولاً" }).isDisabled()),
+      "the sheet is checked row by row and refused while a row has an error");
+    await acc.page.setInputFiles("[data-testid=import-file]", {
+      name: "suppliers-ok.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: xlsxBuffer([head, [supplierName, "محطة وقود", "", "", "", "", "300"]]),
+    });
+    await acc.page.getByRole("button", { name: "استيراد 1 سجل" }).click();
+    await acc.page.getByText("تم الاستيراد").waitFor({ timeout: 30000 });
+    await acc.page.goto(`${BASE}/opening`);
+    check((await acc.page.locator("section", { hasText: "أرصدة الموردين" }).locator("tbody tr", { hasText: supplierName }).innerText()).includes("300.000"),
+      "the imported sheet adds the existing supplier's opening balance, nothing else");
+    await acc.page.screenshot({ path: path.join(OUT, "opening-balances.png"), fullPage: true });
+
+    // Clean up: every opening line, then the date itself.
+    for (let i = 0; i < 12; i++) {
+      const del = acc.page.getByRole("button", { name: "حذف" }).first();
+      if (!(await del.count())) break;
+      await del.click();
+      await acc.page.waitForTimeout(1500);
+      await acc.page.goto(`${BASE}/opening`);
+    }
+    await acc.page.getByRole("button", { name: "إزالة التاريخ" }).click();
+    await acc.page.waitForTimeout(1500);
+    await acc.page.goto(`${BASE}/opening`);
+    check((await acc.page.inputValue("#opening_date")) === "" && (await acc.page.getByText("حدد تاريخ بدء العمل أولاً").count()) === 1,
+      "the test balances and the date are removed again");
+    await acc.page.goto(`${BASE}/ledger?from=${today}&to=${today}`);
+    const tbFoot4 = await acc.page.locator("tfoot td").allInnerTexts();
+    check(tbFoot4[2] === tbFoot4[3], "the trial balance still balances after the opening balances");
+  }
+  const obPhone = await login(browser, need("E2E_ACCOUNTANT_EMAIL"), need("E2E_ACCOUNTANT_PASSWORD"), VIEWPORTS.mobile);
+  for (const url of ["/opening", "/import"]) {
+    await obPhone.page.goto(`${BASE}${url}`);
+    const ok = await layoutOk(obPhone.page);
+    check(ok.rtl && ok.noSideScroll && !ok.loadError, `${url} fits a phone`);
+  }
+  await obPhone.context.close();
+  for (const url of ["/opening", "/import"]) {
+    await disp.page.goto(`${BASE}${url}`);
+    check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
+  }
 
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).

@@ -70,6 +70,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_opening: boolean
           method: string
           notes: string | null
           receipt_no: number
@@ -88,6 +89,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_opening?: boolean
           method: string
           notes?: string | null
           receipt_no?: never
@@ -106,6 +108,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_opening?: boolean
           method?: string
           notes?: string | null
           receipt_no?: never
@@ -209,6 +212,7 @@ export type Database = {
           customs_portal_url: string | null
           fuel_anomaly_threshold_pct: number
           id: boolean
+          opening_date: string | null
           overhead_allocation: string
           phone: string | null
           tax_number: string | null
@@ -223,6 +227,7 @@ export type Database = {
           customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
+          opening_date?: string | null
           overhead_allocation?: string
           phone?: string | null
           tax_number?: string | null
@@ -237,6 +242,7 @@ export type Database = {
           customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
+          opening_date?: string | null
           overhead_allocation?: string
           phone?: string | null
           tax_number?: string | null
@@ -1398,6 +1404,84 @@ export type Database = {
         }
         Relationships: []
       }
+      opening_balances: {
+        Row: {
+          account_id: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_minor: number
+          debit_minor: number
+          id: string
+          kind: string
+          notes: string | null
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_minor?: number
+          debit_minor?: number
+          id?: string
+          kind: string
+          notes?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_minor?: number
+          debit_minor?: number
+          id?: string
+          kind?: string
+          notes?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balances_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_balance_v"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "opening_balances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balances_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balance_v"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "opening_balances_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1508,6 +1592,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_opening: boolean
           method: string
           notes: string | null
           paid_on: string
@@ -1527,6 +1612,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_opening?: boolean
           method: string
           notes?: string | null
           paid_on: string
@@ -1546,6 +1632,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_opening?: boolean
           method?: string
           notes?: string | null
           paid_on?: string
@@ -2313,6 +2400,7 @@ export type Database = {
           last_invoice: string | null
           last_receipt: string | null
           name: string | null
+          opening_minor: number | null
           overdue_minor: number | null
           received_minor: number | null
           ref_code: string | null
@@ -2967,6 +3055,7 @@ export type Database = {
         Args: { p_date?: string; p_entry_id: string; p_reason?: string }
         Returns: string
       }
+      set_opening_date: { Args: { p_date: string }; Returns: undefined }
       settle_driver_advance: {
         Args: { p_driver_id: string; p_notes?: string; p_settled_on?: string }
         Returns: string

@@ -6,6 +6,7 @@
 begin;
 
 truncate
+  public.opening_balances,
   public.customs_documents,
   public.supplier_payments,
   public.invoice_lines,
@@ -31,6 +32,7 @@ truncate
 restart identity;
 
 update public.profiles set driver_id = null where driver_id is not null;
+update public.company_settings set opening_date = null;
 delete from public.drivers;
 delete from public.trucks;
 delete from public.clients;

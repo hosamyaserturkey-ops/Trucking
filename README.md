@@ -123,6 +123,25 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - **Mistakes:** delete the payment; its entries are reversed.
 - Supplier payments and balances are for the manager and the accountant.
 
+## Opening balances and Excel import (الأرصدة الافتتاحية والاستيراد)
+
+- **الأرصدة الافتتاحية (`/opening`):** the balances on the first day in the system (manager and accountant).
+  - **Opening date:** set the first day first. Balances are as at the start of that day; everything from that day on is entered as normal transactions. The date can be moved (everything moves with it) or removed while nothing depends on it.
+  - **Accounts:** cash, bank, assets, loans, capital and so on, one balance each, debit or credit. Customer, supplier, advance and cheque accounts are refused here; they come from their own sections.
+  - **Customers and suppliers:** one balance per party, net of the cheques below. It shows in their statements and balances (treated as due on the opening date).
+  - **Driver advances:** what each driver still holds. It is settled later like any advance.
+  - **Cheques:** customers' cheques still in hand, and our cheques the bank has not paid yet, one by one. They appear in the cheque lists to be marked cleared or bounced; a bounced one goes back onto the party.
+  - **Posting:** the balances post as one entry («الأرصدة الافتتاحية») and the difference goes to capital (3101). Each advance and cheque posts its own entry against capital. Any change re-posts.
+- **استيراد من Excel (`/import`):** trucks, drivers, customers and suppliers from a filled template.
+  - **Template:** download the template (right-to-left, header row, an example row that is skipped), fill one row per record, and upload it.
+  - **Checks:** every row is checked in the browser and again on the server with the same rules as the forms. Errors show by row number, and nothing is saved while any row has one.
+  - **Existing records:** a record that already exists (same fleet number, name, or national ID for drivers) is left as it is; it only gets its opening balance if it has none yet.
+  - **What each template can carry:**
+    - customers and suppliers: an opening balance (positive on the usual side);
+    - drivers: the advance they hold and their usual truck (by fleet number);
+    - trucks: their licence number and expiry.
+  - **Reading Excel files:** done in-house on top of `fflate` (`src/lib/xlsx.ts`), tested against a file written by openpyxl.
+
 ## Licences (الرخص)
 
 - **Driver form:** when adding or editing a driver, attach a scan of the driving licence (PDF or photo, up to 10 MB) next to its number and expiry. Staff open it from the driver's page; the driver opens his own from his phone (**عرض رخصتي**).
@@ -288,6 +307,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   19. customs declarations on file (PDF or photo) and the customs inquiry system link
   20. supplier payments and issued cheques posted as journal entries; discount received account (4104); supplier balances
   21. driving licence scan on the driver
+  22. opening balances: opening date, balances per account/customer/supplier posted as one entry, opening driver advances and cheques
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
@@ -299,6 +319,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   - Run `truncate audit.log;`.
   - Empty the R2 bucket `trucking-files` (demo receipt photos), and once R2 is confirmed, remove the old Supabase Storage buckets.
   - Delete the demo users in Supabase Auth.
+  - Then: import trucks, drivers, customers and suppliers from Excel (`/import`), set the opening date and enter the opening balances (`/opening`).
 
 ## Users
 
@@ -310,7 +331,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 
 - **4:** work orders, documents and alerts (WhatsApp/SMS).
 - **5:** JoFotara (Jordan e-invoicing).
-- **6:** manual journal entries, period closing.
+- **6:** manual journal entries, period closing, bank reconciliation.
 - **7:** payroll.
 - **8:** reports and exports.
 - **9:** hardening.
