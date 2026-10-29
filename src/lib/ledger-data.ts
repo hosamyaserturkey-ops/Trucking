@@ -167,13 +167,15 @@ const SOURCE_TABLES: Record<string, string> = {
 export async function existingSources(rows: { source_type: string | null; source_id: string | null }[]): Promise<Set<string>> {
   const supabase = (await createClient()) as unknown as SupabaseClient;
   const byTable = new Map<string, Set<string>>();
+  const found = new Set<string>();
   for (const r of rows) {
     const table = r.source_type ? SOURCE_TABLES[r.source_type] : undefined;
+    // The opening entry (and anything without a document table) always has its page.
+    if (!table && r.source_id) found.add(r.source_id);
     if (!table || !r.source_id) continue;
     if (!byTable.has(table)) byTable.set(table, new Set());
     byTable.get(table)!.add(r.source_id);
   }
-  const found = new Set<string>();
   await Promise.all(
     [...byTable].map(async ([table, idSet]) => {
       const ids = [...idSet];

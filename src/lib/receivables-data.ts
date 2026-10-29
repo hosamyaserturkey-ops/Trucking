@@ -6,7 +6,7 @@ import { formatDate } from "@/lib/format";
 export type ClientStatementLine = {
   key: string;
   date: string;
-  kind: "invoice" | "receipt" | "bounced";
+  kind: "opening" | "invoice" | "receipt" | "bounced";
   docId: string;
   docNo: number;
   description: string;
@@ -50,7 +50,10 @@ export async function loadClientStatement(clientId: string, f: StatementFilter) 
       const kind = r.kind as ClientStatementLine["kind"];
       let description = "";
       let details: string | null = null;
-      if (kind === "invoice") {
+      if (kind === "opening") {
+        description = "رصيد افتتاحي";
+        details = "رصيد الزبون يوم بدء العمل";
+      } else if (kind === "invoice") {
         description = `فاتورة رقم ${r.doc_no}`;
         details = `${r.lines_count} نقلة · ${formatDate(r.period_from)} – ${formatDate(r.period_to)}`;
       } else if (kind === "receipt") {

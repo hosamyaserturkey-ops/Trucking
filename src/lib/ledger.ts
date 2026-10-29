@@ -17,6 +17,7 @@ export const JOURNAL_SOURCE: Record<string, string> = {
   cheque: "شيك",
   supplier_payment: "دفعة مورد",
   issued_cheque: "شيك صادر",
+  opening: "أرصدة افتتاحية",
   depreciation: "استهلاك",
 };
 
@@ -33,6 +34,7 @@ export function sourceHref(sourceType: string | null | undefined, sourceId: stri
   if (sourceType === "invoice") return `/invoices/${sourceId}`;
   if (sourceType === "receipt" || sourceType === "cheque") return `/print/receipts/${sourceId}`;
   if (sourceType === "supplier_payment" || sourceType === "issued_cheque") return `/print/payments/${sourceId}`;
+  if (sourceType === "opening") return "/opening";
   return null;
 }
 

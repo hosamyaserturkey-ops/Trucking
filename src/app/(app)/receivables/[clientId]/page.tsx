@@ -101,9 +101,13 @@ export default async function ClientStatementPage({
                   <Tr key={l.key} className={l.kind === "bounced" ? "text-danger" : ""}>
                     <Td className="num whitespace-nowrap">{formatDate(l.date)}</Td>
                     <Td className="whitespace-nowrap">
-                      <Link href={l.kind === "invoice" ? `/invoices/${l.docId}` : `/print/receipts/${l.docId}`} className="hover:underline">
-                        {l.description}
-                      </Link>
+                      {l.kind === "opening" ? (
+                        l.description
+                      ) : (
+                        <Link href={l.kind === "invoice" ? `/invoices/${l.docId}` : `/print/receipts/${l.docId}`} className="hover:underline">
+                          {l.description}
+                        </Link>
+                      )}
                     </Td>
                     <Td className="text-xs text-muted">{l.details ?? ""}</Td>
                     <Td className="num whitespace-nowrap text-end">

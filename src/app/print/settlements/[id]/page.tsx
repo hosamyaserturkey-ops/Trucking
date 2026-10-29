@@ -11,7 +11,7 @@ import { PrintButton } from "@/components/print-button";
 export const metadata: Metadata = { title: "سند تسوية عهدة" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const METHOD: Record<string, string> = { cash: "نقداً", bank: "تحويل بنكي" };
+const METHOD: Record<string, string> = { cash: "نقداً", bank: "تحويل بنكي", opening: "افتتاحية (يوم بدء العمل)" };
 const CELL = "border border-border px-2 py-1";
 
 // A4 slip the driver and the accountant sign when an advance is settled.
