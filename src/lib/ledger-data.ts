@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { addDays } from "@/lib/date-range";
 import { statementAccounts, withRunningBalance, type StatementFilter } from "@/lib/ledger";
@@ -145,3 +146,43 @@ export async function loadStatementParties() {
 
 /** The exclusive end date the trial balance function takes. */
 export const dayAfter = (iso: string) => addDays(iso, 1);
+
+// The table behind each kind of posted document.
+const SOURCE_TABLES: Record<string, string> = {
+  expense: "expenses",
+  fuel: "fuel_fillups",
+  advance: "driver_advances",
+  settlement: "driver_settlements",
+  invoice: "invoices",
+  receipt: "client_receipts",
+  cheque: "client_receipts",
+  supplier_payment: "supplier_payments",
+  issued_cheque: "supplier_payments",
+};
+
+/**
+ * The documents behind these entries that still exist. A deleted receipt or
+ * payment keeps its (reversed) entries, but its page is gone: no link to it.
+ */
+export async function existingSources(rows: { source_type: string | null; source_id: string | null }[]): Promise<Set<string>> {
+  const supabase = (await createClient()) as unknown as SupabaseClient;
+  const byTable = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const table = r.source_type ? SOURCE_TABLES[r.source_type] : undefined;
+    if (!table || !r.source_id) continue;
+    if (!byTable.has(table)) byTable.set(table, new Set());
+    byTable.get(table)!.add(r.source_id);
+  }
+  const found = new Set<string>();
+  await Promise.all(
+    [...byTable].map(async ([table, idSet]) => {
+      const ids = [...idSet];
+      // Chunks keep the request URL short.
+      for (let i = 0; i < ids.length; i += 150) {
+        const { data } = await supabase.from(table).select("id").in("id", ids.slice(i, i + 150));
+        for (const d of (data ?? []) as { id: string }[]) found.add(d.id);
+      }
+    }),
+  );
+  return found;
+}
