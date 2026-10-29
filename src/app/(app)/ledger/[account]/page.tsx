@@ -5,7 +5,7 @@ import { ChevronRight, Printer } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { filterQuery, sourceHref, statementFilter } from "@/lib/ledger";
-import { loadStatement, loadStatementParties, type StatementLine } from "@/lib/ledger-data";
+import { existingSources, loadStatement, loadStatementParties, type StatementLine } from "@/lib/ledger-data";
 import { formatDate, formatInt } from "@/lib/format";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
@@ -55,6 +55,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
   const f = statementFilter(await searchParams);
   const [st, parties] = await Promise.all([loadStatement(account, f), loadStatementParties()]);
   if (!st) notFound();
+  const existing = await existingSources(st.lines);
   const q = filterQuery(f);
 
   return (
@@ -120,7 +121,8 @@ export default async function StatementPage({ params, searchParams }: { params: 
                   </Td>
                 </tr>
                 {st.lines.map((l) => {
-                  const href = sourceHref(l.source_type, l.source_id);
+                  const deleted = !!sourceHref(l.source_type, l.source_id) && !existing.has(l.source_id ?? "");
+                  const href = deleted ? null : sourceHref(l.source_type, l.source_id);
                   const muted = l.status === "reversed" || l.is_reversal;
                   return (
                     <Tr key={l.id} className={muted ? "text-muted" : ""}>
@@ -136,7 +138,10 @@ export default async function StatementPage({ params, searchParams }: { params: 
                             {l.description}
                           </Link>
                         ) : (
-                          l.description
+                          <>
+                            {l.description}
+                            {deleted ? <span className="ms-1 text-xs text-muted">(المستند محذوف)</span> : null}
+                          </>
                         )}
                         {l.status === "reversed" ? <span className="ms-1 text-xs">(معكوس)</span> : null}
                         {st.multiAccount ? <span className="block text-xs text-muted">{l.account}</span> : null}

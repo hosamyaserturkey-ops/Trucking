@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { JOURNAL_SOURCE, sourceHref, sourceLabel, statementFilter } from "@/lib/ledger";
+import { existingSources } from "@/lib/ledger-data";
 import { formatDate, formatInt } from "@/lib/format";
 import { JOURNAL_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Sear
   }
   const { data, count } = await q;
   const entries = data ?? [];
+  const existing = await existingSources(entries);
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const link = (p: number) => {
@@ -116,7 +118,8 @@ export default async function JournalPage({ searchParams }: { searchParams: Sear
         <div className="flex flex-col gap-3">
           {entries.map((e) => {
             const st = JOURNAL_STATUS[e.status];
-            const href = sourceHref(e.source_type, e.source_id);
+            const deleted = !!sourceHref(e.source_type, e.source_id) && !existing.has(e.source_id ?? "");
+            const href = deleted ? null : sourceHref(e.source_type, e.source_id);
             const lines = [...((e.lines ?? []) as unknown as Line[])].sort((a, b) => a.line_no - b.line_no);
             return (
               <Card key={e.id}>
@@ -129,7 +132,10 @@ export default async function JournalPage({ searchParams }: { searchParams: Sear
                         {e.description}
                       </Link>
                     ) : (
-                      <span>{e.description}</span>
+                      <span>
+                        {e.description}
+                        {deleted ? <span className="ms-1 text-xs text-muted">(المستند محذوف)</span> : null}
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
