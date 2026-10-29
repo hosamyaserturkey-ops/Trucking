@@ -12,7 +12,7 @@
 // Uses the Playwright that is installed globally; `npx playwright` works too.
 const { chromium } = require("playwright");
 const fs = require("node:fs");
-const { strToU8, zipSync } = require("fflate");
+const { strFromU8, strToU8, unzipSync, zipSync } = require("fflate");
 
 /** A one-sheet .xlsx with text cells, as a spreadsheet program would save it (for the import check). */
 function xlsxBuffer(rows) {
@@ -852,6 +852,35 @@ async function tripAndAdvanceFlow(browser) {
     await disp.page.goto(`${BASE}${url}`);
     check(new URL(disp.page.url()).pathname !== url, `a dispatcher is kept out of ${url}`);
   }
+
+  // 9i. A driving licence about to expire shows on the fleet board (the driver's date is put back
+  // afterwards), and statements export to Excel: amounts as numbers, no action column.
+  await disp.page.goto(`${BASE}${driverHref}`);
+  const licenceWas = await disp.page.inputValue("#f-license_expiry");
+  await disp.page.fill("#f-license_expiry", addDaysIso(today, 10));
+  await Promise.all([disp.page.waitForURL(/\/master\/drivers$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+  await disp.page.goto(`${BASE}/`);
+  const expiringCard = disp.page.locator("section", { has: disp.page.getByText("رخص سائقين تنتهي قريباً") });
+  check((await expiringCard.locator("li", { hasText: driverName }).innerText()).includes("10 يوم"), "the fleet board warns of a driving licence ending in 10 days");
+  await disp.page.goto(`${BASE}${driverHref}`);
+  await disp.page.fill("#f-license_expiry", licenceWas);
+  await Promise.all([disp.page.waitForURL(/\/master\/drivers$/, { timeout: 30000 }), disp.page.getByRole("button", { name: "حفظ التعديلات" }).click()]);
+
+  const sheetXml = async (page) => {
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "تصدير Excel" }).first().click()]);
+    const files = unzipSync(new Uint8Array(fs.readFileSync(await dl.path())));
+    return { name: dl.suggestedFilename(), xml: strFromU8(files["xl/worksheets/sheet1.xml"]) };
+  };
+  await acc.page.goto(`${BASE}/ledger?from=${addDaysIso(today, -30)}&to=${today}`);
+  const tbSheet = await sheetXml(acc.page);
+  check(/^trial-balance-\d{4}-\d{2}-\d{2}\.xlsx$/.test(tbSheet.name) && tbSheet.xml.includes("ميزان المراجعة") && tbSheet.xml.includes("الصندوق") && /<c r="[A-Z]+\d+"><v>-?\d/.test(tbSheet.xml),
+    "the trial balance exports to Excel with amounts as numbers");
+  await acc.page.goto(`${BASE}/receipts?from=${addDaysIso(today, -365)}&to=${today}`);
+  const rc = await acc.page.locator("section", { has: acc.page.getByRole("heading", { name: "سندات القبض", exact: true }) });
+  const [rcDl] = await Promise.all([acc.page.waitForEvent("download"), rc.getByRole("button", { name: "تصدير Excel" }).click()]);
+  const rcXml = strFromU8(unzipSync(new Uint8Array(fs.readFileSync(await rcDl.path())))["xl/worksheets/sheet1.xml"]);
+  check(rcXml.includes("سندات القبض") && rcXml.includes("رقم السند") && !rcXml.includes("إجراءات") && !rcXml.includes("حذف"),
+    "the receipts list exports without its action column");
 
   // 10. Daily loading sheet: one line per load, references from the customer's own series.
   // The dispatcher's page already accepts confirmation dialogs (step 2).

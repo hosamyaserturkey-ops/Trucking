@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, ClipboardCheck, FileWarning, Fuel, Wrench } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, FileWarning, Fuel, IdCard, Wrench } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
-import { resolveRange } from "@/lib/date-range";
+import { addDays, daysBetween, expiryBand, resolveRange, todayIso } from "@/lib/date-range";
 import { pnlTotals } from "@/lib/pnl";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDecimal, formatInt } from "@/lib/format";
@@ -20,8 +20,9 @@ export default async function FleetPage() {
   const finance = canSeeFinancials(profile.role);
   const month = resolveRange({ range: "month" });
   const supabase = await createClient();
+  const today = todayIso();
 
-  const [trucksRes, docsRes, servicesRes, pnlRes, pendingRes, pendingFuelRes, fuelAlertsRes] = await Promise.all([
+  const [trucksRes, docsRes, servicesRes, pnlRes, pendingRes, pendingFuelRes, fuelAlertsRes, licencesRes] = await Promise.all([
     supabase.from("truck_overview_v").select("*").order("code"),
     supabase
       .from("document_expiry_v")
@@ -46,7 +47,18 @@ export default async function FleetPage() {
       .select("id, truck_id, truck_code, driver_name, filled_on, km_per_liter, baseline_km_per_liter")
       .order("filled_on", { ascending: false })
       .limit(8),
+    // Driving licences expired or ending within 30 days (active drivers).
+    supabase
+      .from("drivers")
+      .select("id, full_name, license_number, license_expiry")
+      .eq("is_active", true)
+      .lte("license_expiry", addDays(today, 30))
+      .order("license_expiry"),
   ]);
+  const licences = (licencesRes.data ?? []).map((d) => {
+    const daysLeft = daysBetween(today, d.license_expiry as string);
+    return { ...d, daysLeft, band: expiryBand(daysLeft) };
+  });
   const fuelAlerts = fuelAlertsRes.data ?? [];
   const pendingApprovals = (pendingRes.count ?? 0) + (pendingFuelRes.count ?? 0);
 
@@ -83,9 +95,9 @@ export default async function FleetPage() {
         <Stat label="في الورشة" value={formatInt(count("workshop"))} tone={count("workshop") ? "warning" : "neutral"} />
         <Stat
           label="تنبيهات"
-          value={formatInt(docs.length + services.length + fuelAlerts.length)}
-          hint="وثائق وصيانة وديزل"
-          tone={docs.length + services.length + fuelAlerts.length ? "danger" : "success"}
+          value={formatInt(docs.length + licences.length + services.length + fuelAlerts.length)}
+          hint="وثائق ورخص وصيانة وديزل"
+          tone={docs.length + licences.length + services.length + fuelAlerts.length ? "danger" : "success"}
         />
         {finance ? (
           <>
@@ -224,6 +236,40 @@ export default async function FleetPage() {
                         <Badge tone={band.tone}>
                           {(d.days_left ?? 0) < 0 ? band.label : `${d.days_left} يوم`}
                         </Badge>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <IdCard className="size-4 text-danger" aria-hidden />
+                  رخص سائقين تنتهي قريباً
+                </span>
+              }
+              subtitle="المنتهية أو خلال 30 يوماً"
+            />
+            {licences.length === 0 ? (
+              <EmptyState>لا توجد رخص قيادة تنتهي قريباً.</EmptyState>
+            ) : (
+              <ul className="divide-y divide-border">
+                {licences.map((d) => {
+                  const band = EXPIRY_BAND[d.band];
+                  return (
+                    <li key={d.id}>
+                      <Link href={`/master/drivers/${d.id}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2">
+                        <span className="min-w-0">
+                          <span className="font-semibold">{d.full_name}</span>
+                          <span className="block text-xs text-muted">
+                            رخصة القيادة{d.license_number ? <span className="num"> {d.license_number}</span> : null} · {formatDate(d.license_expiry)}
+                          </span>
+                        </span>
+                        <Badge tone={band.tone}>{d.daysLeft < 0 ? band.label : `${d.daysLeft} يوم`}</Badge>
                       </Link>
                     </li>
                   );

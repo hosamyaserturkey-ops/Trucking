@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, inclusiveEnd, monthsIn, resolveRange, todayIso } from "./date-range";
+import { addDays, daysBetween, expiryBand, inclusiveEnd, monthsIn, resolveRange, todayIso } from "./date-range";
 
 describe("resolveRange", () => {
   const today = "2026-10-25";
@@ -44,6 +44,14 @@ describe("helpers", () => {
   it("monthsIn lists overlapping months", () => {
     const range = resolveRange({ range: "custom", from: "2026-05-15", to: "2026-07-02" }, "2026-10-25");
     expect(monthsIn(range)).toEqual(["2026-05-01", "2026-06-01", "2026-07-01"]);
+  });
+
+  it("daysBetween and expiryBand match the expiry alerts", () => {
+    expect(daysBetween("2026-10-29", "2026-11-05")).toBe(7);
+    expect(daysBetween("2026-10-29", "2026-10-28")).toBe(-1);
+    expect(daysBetween("2026-03-28", "2026-03-30")).toBe(2);
+    expect([-1, 0, 7, 8, 30, 31, 60, 61].map(expiryBand)).toEqual(["expired", "d7", "d7", "d30", "d30", "d60", "d60", "ok"]);
+    expect(expiryBand(null)).toBe("none");
   });
 
   it("todayIso uses the company timezone", () => {

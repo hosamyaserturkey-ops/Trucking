@@ -13,6 +13,7 @@ import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 
 export const metadata: Metadata = { title: "الفواتير" };
 
@@ -112,11 +113,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
         </StatGrid>
 
         <Card>
-          <CardHeader title="سجل الفواتير" />
+          <CardHeader title="سجل الفواتير" action={<ExportButton tableId="invoices-table" file="invoices" title={`الفواتير من ${formatDate(f.from)} إلى ${formatDate(f.to)}`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد فواتير في هذه الفترة.</EmptyState>
           ) : (
-            <Table>
+            <Table id="invoices-table">
               <thead>
                 <tr>
                   <Th>رقم الفاتورة</Th>

@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { LoadForm } from "@/components/load-form";
 import { DeleteLoadButton } from "@/components/delete-load-button";
 
@@ -154,11 +155,11 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
         </StatGrid>
 
         <Card>
-          <CardHeader title="النقلات" subtitle={finance ? "الأجرة تُحسب ضمن إيراد الشاحنة" : undefined} />
+          <CardHeader title="النقلات" subtitle={finance ? "الأجرة تُحسب ضمن إيراد الشاحنة" : undefined} action={<ExportButton tableId="loading-table" file="loading-sheet" title={`كشف التحميل ${oneDay ? formatDate(f.from) : `من ${formatDate(f.from)} إلى ${formatDate(f.to)}`}`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد نقلات {oneDay ? "في هذا اليوم" : "في هذه الفترة"}.</EmptyState>
           ) : (
-            <Table>
+            <Table id="loading-table">
               <thead>
                 <tr>
                   <Th>رقم الإشارة</Th>

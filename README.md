@@ -123,6 +123,14 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - **Mistakes:** delete the payment; its entries are reversed.
 - Supplier payments and balances are for the manager and the accountant.
 
+## Alerts and Excel export
+
+- **Fleet board alerts:** truck documents and driving licences that have expired or end within 30 days (رخص سائقين تنتهي قريباً, from each active driver's licence expiry), maintenance due, and abnormal diesel.
+- **«تصدير Excel»** on every statement and list:
+  - which: the trial balance, account statements, customer statements, customer and supplier balances, receipts and payments with their cheque lists, invoices, expenses, diesel, the loading sheet, trips and driver advances;
+  - what: the table as shown, with a title row (what, which period) and amounts as numbers. Balances are signed (debit +, credit −) and the action column is left out.
+  - how: built in the browser (`src/components/export-button.tsx`, `src/lib/table-export.ts`), so it exports exactly what the filters show.
+
 ## Opening balances and Excel import (الأرصدة الافتتاحية والاستيراد)
 
 - **الأرصدة الافتتاحية (`/opening`):** the balances on the first day in the system (manager and accountant).

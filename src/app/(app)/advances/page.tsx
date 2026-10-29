@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { AdvanceForm } from "@/components/advance-forms";
 import { BalanceText } from "@/components/balance-text";
 
@@ -46,11 +47,11 @@ export default async function AdvancesPage() {
         </StatGrid>
 
         <Card>
-          <CardHeader title="أرصدة السائقين" />
+          <CardHeader title="أرصدة السائقين" action={<ExportButton tableId="advances-table" file="driver-advances" title={`أرصدة عهد السائقين في ${formatDate(todayIso())} · بالدينار`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا يوجد سائقون.</EmptyState>
           ) : (
-            <Table>
+            <Table id="advances-table">
               <thead>
                 <tr>
                   <Th>السائق</Th>

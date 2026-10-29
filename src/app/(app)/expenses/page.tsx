@@ -13,6 +13,7 @@ import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 
 export const metadata: Metadata = { title: "المصاريف" };
 
@@ -169,11 +170,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
         </StatGrid>
 
         <Card>
-          <CardHeader title="سجل المصاريف" subtitle="آخر 400 في الفترة" />
+          <CardHeader title="سجل المصاريف" subtitle="آخر 400 في الفترة" action={<ExportButton tableId="expenses-table" file="expenses" title={`المصاريف من ${range.from} إلى ${inclusiveEnd(range)}`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد مصاريف.</EmptyState>
           ) : (
-            <Table>
+            <Table id="expenses-table">
               <thead>
                 <tr>
                   <Th>التاريخ</Th>

@@ -14,6 +14,7 @@ import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 
 export const metadata: Metadata = { title: "الديزل" };
 
@@ -256,11 +257,11 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
         </div>
 
         <Card>
-          <CardHeader title="سجل التعبئات" subtitle="آخر 400 في الفترة" />
+          <CardHeader title="سجل التعبئات" subtitle="آخر 400 في الفترة" action={<ExportButton tableId="diesel-table" file="diesel" title={`سجل تعبئات الديزل من ${range.from} إلى ${inclusiveEnd(range)}`} />} />
           {fills.length === 0 ? (
             <EmptyState>لا توجد تعبئات.</EmptyState>
           ) : (
-            <Table>
+            <Table id="diesel-table">
               <thead>
                 <tr>
                   <Th>الوقت</Th>
