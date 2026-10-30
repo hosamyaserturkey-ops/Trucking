@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { ChequeStatusForm, DeleteReceiptButton, ReceiptForm } from "@/components/receipt-forms";
 
 export const metadata: Metadata = { title: "المقبوضات" };
@@ -80,11 +81,11 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Sea
         </StatGrid>
 
         <Card>
-          <CardHeader title="شيكات برسم التحصيل" subtitle="بالصندوق أو مودعة، الأقرب استحقاقاً أولاً" />
+          <CardHeader title="شيكات برسم التحصيل" subtitle="بالصندوق أو مودعة، الأقرب استحقاقاً أولاً" action={<ExportButton tableId="cheques-table" file="cheques-in-hand" title={`شيكات برسم التحصيل في ${formatDate(today)}`} />} />
           {cheques.length === 0 ? (
             <EmptyState>لا توجد شيكات بانتظار التحصيل.</EmptyState>
           ) : (
-            <Table>
+            <Table id="cheques-table">
               <thead>
                 <tr>
                   <Th>الاستحقاق</Th>
@@ -160,11 +161,11 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Sea
         </form>
 
         <Card>
-          <CardHeader title="سندات القبض" subtitle={`${formatInt(rows.length)} سند`} />
+          <CardHeader title="سندات القبض" subtitle={`${formatInt(rows.length)} سند`} action={<ExportButton tableId="receipts-table" file="receipts" title={`سندات القبض من ${formatDate(f.from)} إلى ${formatDate(f.to)} · المبالغ بالدينار`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد سندات قبض في هذه الفترة.</EmptyState>
           ) : (
-            <Table>
+            <Table id="receipts-table">
               <thead>
                 <tr>
                   <Th>رقم السند</Th>

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, EmptyState, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 
 export const metadata: Metadata = { title: "الرحلات" };
 
@@ -72,12 +73,15 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
         title="الرحلات"
         subtitle={`${formatInt(running)} جارية · ${formatInt(planned)} مخططة · ${formatInt(trips.length)} في القائمة`}
         action={
-          canWrite ? (
-            <LinkButton href="/trips/new" variant="primary">
-              <Plus className="size-4" aria-hidden />
-              رحلة جديدة
-            </LinkButton>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            <ExportButton tableId="trips-table" file="trips" title="الرحلات" />
+            {canWrite ? (
+              <LinkButton href="/trips/new" variant="primary">
+                <Plus className="size-4" aria-hidden />
+                رحلة جديدة
+              </LinkButton>
+            ) : null}
+          </div>
         }
       />
 
@@ -132,7 +136,7 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
         {trips.length === 0 ? (
           <EmptyState>لا توجد رحلات بهذه الشروط.</EmptyState>
         ) : (
-          <Table>
+          <Table id="trips-table">
             <thead>
               <tr>
                 <Th>رقم</Th>

@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { DeletePaymentButton, IssuedChequeStatusForm, SupplierPaymentForm } from "@/components/supplier-payment-forms";
 
 export const metadata: Metadata = { title: "دفعات الموردين" };
@@ -95,11 +96,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </StatGrid>
 
         <Card>
-          <CardHeader title="شيكات صادرة بانتظار الصرف" subtitle="الأقرب استحقاقاً أولاً؛ أمّن رصيد البنك قبل الاستحقاق" />
+          <CardHeader title="شيكات صادرة بانتظار الصرف" subtitle="الأقرب استحقاقاً أولاً؛ أمّن رصيد البنك قبل الاستحقاق" action={<ExportButton tableId="issued-cheques-table" file="issued-cheques" title={`شيكات صادرة بانتظار الصرف في ${formatDate(today)}`} />} />
           {cheques.length === 0 ? (
             <EmptyState>لا توجد شيكات صادرة بانتظار الصرف.</EmptyState>
           ) : (
-            <Table>
+            <Table id="issued-cheques-table">
               <thead>
                 <tr>
                   <Th>الاستحقاق</Th>
@@ -170,11 +171,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </form>
 
         <Card>
-          <CardHeader title="دفعات الموردين" subtitle={`${formatInt(rows.length)} دفعة`} />
+          <CardHeader title="دفعات الموردين" subtitle={`${formatInt(rows.length)} دفعة`} action={<ExportButton tableId="payments-table" file="supplier-payments" title={`دفعات الموردين من ${formatDate(f.from)} إلى ${formatDate(f.to)} · المبالغ بالدينار`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد دفعات للموردين في هذه الفترة.</EmptyState>
           ) : (
-            <Table>
+            <Table id="payments-table">
               <thead>
                 <tr>
                   <Th>رقم الدفعة</Th>

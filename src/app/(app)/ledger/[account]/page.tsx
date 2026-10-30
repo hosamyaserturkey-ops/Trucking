@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { Amount, Balance, StatementFilters } from "@/components/ledger-bits";
 
 export const metadata: Metadata = { title: "كشف حساب" };
@@ -88,6 +89,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           <CardHeader
             title="الحركات"
             subtitle={`${formatInt(st.lines.length)} حركة · المبالغ بالدينار · القيد المرحّل لا يُعدّل، والتصحيح بقيد عكسي`}
+            action={<ExportButton tableId="statement-table" file="statement" title={`كشف حساب: ${st.title} من ${formatDate(f.from)} إلى ${formatDate(f.to)} · الرصيد موجب = مدين، سالب = دائن`} />}
           />
           {st.truncated ? (
             <p role="status" className="mx-4 mt-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
@@ -97,7 +99,7 @@ export default async function StatementPage({ params, searchParams }: { params: 
           {st.lines.length === 0 && st.opening === 0 ? (
             <EmptyState>لا توجد حركات في هذه الفترة.</EmptyState>
           ) : (
-            <Table>
+            <Table id="statement-table">
               <thead>
                 <tr>
                   <Th>التاريخ</Th>

@@ -3,12 +3,14 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { todayIso } from "@/lib/date-range";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate, formatInt } from "@/lib/format";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { Balance } from "@/components/ledger-bits";
 
 export const metadata: Metadata = { title: "ذمم العملاء" };
@@ -53,15 +55,18 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
             title="الأرصدة حسب الزبون"
             subtitle="اضغط على الزبون لكشف حسابه"
             action={
-              <Link href={all === "1" ? "/receivables" : "/receivables?all=1"} className="text-sm text-primary hover:underline">
-                {all === "1" ? "إخفاء الزبائن بدون حركة" : "إظهار كل الزبائن"}
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <ExportButton tableId="receivables-table" file="receivables" title={`ذمم العملاء في ${formatDate(todayIso())} · المبالغ بالدينار · الرصيد موجب = مدين، سالب = دائن`} />
+                <Link href={all === "1" ? "/receivables" : "/receivables?all=1"} className="text-sm text-primary hover:underline">
+                  {all === "1" ? "إخفاء الزبائن بدون حركة" : "إظهار كل الزبائن"}
+                </Link>
+              </div>
             }
           />
           {rows.length === 0 ? (
             <EmptyState>لا توجد ذمم.</EmptyState>
           ) : (
-            <Table>
+            <Table id="receivables-table">
               <thead>
                 <tr>
                   <Th>الزبون</Th>

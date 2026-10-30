@@ -14,6 +14,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { Amount, Balance, StatementFilters } from "@/components/ledger-bits";
 import { ReceiptForm } from "@/components/receipt-forms";
 
@@ -73,11 +74,11 @@ export default async function ClientStatementPage({
         </StatGrid>
 
         <Card>
-          <CardHeader title="الحركات" subtitle="الفواتير مدينة، والمقبوضات دائنة، والشيك المرتجع مدين من جديد" />
+          <CardHeader title="الحركات" subtitle="الفواتير مدينة، والمقبوضات دائنة، والشيك المرتجع مدين من جديد" action={<ExportButton tableId="client-statement" file="customer-statement" title={`كشف حساب ${st.client.name} من ${formatDate(f.from)} إلى ${formatDate(f.to)} · الرصيد موجب = مدين، سالب = دائن`} />} />
           {st.lines.length === 0 && st.opening === 0 ? (
             <EmptyState>لا توجد حركات في هذه الفترة.</EmptyState>
           ) : (
-            <Table>
+            <Table id="client-statement">
               <thead>
                 <tr>
                   <Th>التاريخ</Th>

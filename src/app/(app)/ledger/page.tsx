@@ -11,6 +11,7 @@ import { ACCOUNT_TYPE } from "@/lib/labels";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { Amount, Balance, StatementFilters } from "@/components/ledger-bits";
 
 export const metadata: Metadata = { title: "كشف الحسابات" };
@@ -66,15 +67,18 @@ export default async function LedgerPage({ searchParams }: { searchParams: Searc
           title="ميزان المراجعة"
           subtitle="اضغط على الحساب لكشف حسابه"
           action={
-            <Link href={`/ledger?${period}${showAll ? "" : "&all=1"}`} className="text-sm text-primary hover:underline">
-              {showAll ? "إخفاء الحسابات بدون حركة" : "إظهار كل الحسابات"}
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <ExportButton tableId="tb-table" file="trial-balance" title={`ميزان المراجعة من ${formatDate(f.from)} إلى ${formatDate(f.to)} · المبالغ بالدينار · الرصيد موجب = مدين، سالب = دائن`} />
+              <Link href={`/ledger?${period}${showAll ? "" : "&all=1"}`} className="text-sm text-primary hover:underline">
+                {showAll ? "إخفاء الحسابات بدون حركة" : "إظهار كل الحسابات"}
+              </Link>
+            </div>
           }
         />
         {rows.length === 0 ? (
           <EmptyState>لا توجد قيود حتى هذا التاريخ.</EmptyState>
         ) : (
-          <Table>
+          <Table id="tb-table">
             <thead>
               <tr>
                 <Th>الرمز</Th>

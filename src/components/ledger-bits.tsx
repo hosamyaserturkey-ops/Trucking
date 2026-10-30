@@ -13,7 +13,8 @@ export function Amount({ minor }: { minor: number }) {
 export function Balance({ minor }: { minor: number }) {
   const b = balanceSide(minor);
   return (
-    <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+    // data-x: the signed balance in dinars (debit +, credit −) for the Excel export.
+    <span className="inline-flex items-baseline gap-1 whitespace-nowrap" data-x={minor / 1000}>
       <span className="num">{formatMoney(b.minor, "JOD", { withCurrency: false })}</span>
       {b.side ? <span className="text-xs font-normal text-muted">{b.side}</span> : null}
     </span>

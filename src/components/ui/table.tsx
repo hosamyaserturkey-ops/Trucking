@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 
 // Wide tables scroll inside their card; the page itself never scrolls sideways.
-export function Table({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Table({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
   return (
     <div className="relative overflow-x-auto">
-      <table className={`w-full border-collapse text-sm ${className}`}>{children}</table>
+      <table id={id} className={`w-full border-collapse text-sm ${className}`}>
+        {children}
+      </table>
     </div>
   );
 }

@@ -33,6 +33,21 @@ export function addDays(iso: string, days: number): string {
   return toIso(d);
 }
 
+/** Whole days from one date to another (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toDate(to).getTime() - toDate(from).getTime()) / 86400000);
+}
+
+/** How close an expiry date is, in the bands the alerts use (as document_expiry_v). */
+export function expiryBand(daysLeft: number | null): "expired" | "d7" | "d30" | "d60" | "ok" | "none" {
+  if (daysLeft === null) return "none";
+  if (daysLeft < 0) return "expired";
+  if (daysLeft <= 7) return "d7";
+  if (daysLeft <= 30) return "d30";
+  if (daysLeft <= 60) return "d60";
+  return "ok";
+}
+
 function isValidIso(value: string | undefined): value is string {
   if (!value || !ISO_DATE.test(value)) return false;
   return toIso(toDate(value)) === value;

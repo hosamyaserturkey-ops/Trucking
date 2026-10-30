@@ -139,8 +139,16 @@ function isoIfValid(y: number, mo: number, d: number): string | null {
   return dt.toISOString().slice(0, 10);
 }
 
-/** A one-sheet workbook: first row bold and frozen, right-to-left when asked. */
-export function writeSheet(rows: (string | number | null)[][], opts: { sheetName: string; rtl?: boolean; widths?: number[] }): Uint8Array {
+/**
+ * A one-sheet workbook, right-to-left when asked. The header row (the first
+ * unless headerRow says otherwise) is bold and stays in view; rows above it
+ * (a title) are bold too.
+ */
+export function writeSheet(
+  rows: (string | number | null)[][],
+  opts: { sheetName: string; rtl?: boolean; widths?: number[]; headerRow?: number },
+): Uint8Array {
+  const header = opts.headerRow ?? 0;
   const cols = (opts.widths ?? []).map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("");
   const sheetRows = rows
     .map((row, r) => {
@@ -148,7 +156,7 @@ export function writeSheet(rows: (string | number | null)[][], opts: { sheetName
         .map((v, c) => {
           if (v === null || v === "") return "";
           const ref = `${columnName(c)}${r + 1}`;
-          const style = r === 0 ? ' s="1"' : "";
+          const style = r <= header ? ' s="1"' : "";
           return typeof v === "number"
             ? `<c r="${ref}"${style}><v>${v}</v></c>`
             : `<c r="${ref}"${style} t="inlineStr"><is><t xml:space="preserve">${escape(v)}</t></is></c>`;
@@ -161,7 +169,7 @@ export function writeSheet(rows: (string | number | null)[][], opts: { sheetName
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
     `<sheetViews><sheetView workbookViewId="0"${opts.rtl ? ' rightToLeft="1"' : ""}>` +
-    `<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+    `<pane ySplit="${header + 1}" topLeftCell="A${header + 2}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
     `<sheetFormatPr defaultRowHeight="15"/>` +
     (cols ? `<cols>${cols}</cols>` : "") +
     `<sheetData>${sheetRows}</sheetData></worksheet>`;

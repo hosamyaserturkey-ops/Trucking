@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { ExportButton } from "@/components/export-button";
 import { Balance } from "@/components/ledger-bits";
 
 export const metadata: Metadata = { title: "ذمم الموردين" };
@@ -58,15 +59,18 @@ export default async function PayablesPage({ searchParams }: { searchParams: Pro
             title="الأرصدة حسب المورد"
             subtitle="اضغط على المورد لكشف حسابه"
             action={
-              <Link href={all === "1" ? "/payables" : "/payables?all=1"} className="text-sm text-primary hover:underline">
-                {all === "1" ? "إخفاء الموردين بدون حركة" : "إظهار كل الموردين"}
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <ExportButton tableId="payables-table" file="payables" title={`ذمم الموردين في ${formatDate(todayIso())} · المبالغ بالدينار · الرصيد موجب = مدين، سالب = دائن`} />
+                <Link href={all === "1" ? "/payables" : "/payables?all=1"} className="text-sm text-primary hover:underline">
+                  {all === "1" ? "إخفاء الموردين بدون حركة" : "إظهار كل الموردين"}
+                </Link>
+              </div>
             }
           />
           {rows.length === 0 ? (
             <EmptyState>لا توجد ذمم للموردين. تظهر هنا المصاريف والديزل المشتراة بالآجل.</EmptyState>
           ) : (
-            <Table>
+            <Table id="payables-table">
               <thead>
                 <tr>
                   <Th>المورد</Th>
