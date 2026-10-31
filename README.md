@@ -170,6 +170,26 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - The load's page lists its declarations, with **+ إرفاق بيان** filling in that load.
 - Customs declarations are for the manager, the accountant and the dispatcher; drivers never get a link to them.
 
+## Maintenance and work orders (الصيانة وأوامر العمل)
+
+- **الصيانة (`/maintenance`):** trucks in the workshop now (open orders, oldest first, with days in the workshop), periodic services overdue or due soon, and every order opened or closed in a period, filtered by truck, workshop and status, with Excel export.
+- **Opening an order (`/maintenance/new`):** truck, workshop or parts supplier, kind (periodic service, repair, tires, inspection, other), the day it went in, the odometer and the work to do. The truck shows **في الورشة** on the fleet board while an order is open. A due service on the list opens an order for it in one click.
+- **Lines:** parts (with part number), labour, tires or other, each with quantity and unit price; the total follows. Lines change only while the order is open.
+- **Closing (manager and accountant):** when the workshop's invoice is in, with its date and number and how it is paid:
+
+  | Paid | Debit | Credit |
+  |---|---|---|
+  | on credit (default) | 5102 الصيانة والإصلاح and 5103 الإطارات (tire lines), on the truck | 2101 the workshop, so it shows in ذمم الموردين and is paid from دفعات الموردين |
+  | cash | same | 1101, with the payment voucher number from the shared book |
+  | bank transfer | same | 1102, with the notice number |
+
+  Tick the periodic services done on the order; they are marked done at the order's odometer and closing date, so the next due point counts from there.
+- **A closed order never changes.** Notes, the invoice number and the invoice scan can still be added. To correct one, the manager or accountant reopens it (its entry is reversed), fixes it and closes it again. An open order can be cancelled with a reason, or deleted if it was opened by mistake.
+- **Truck profit counts closed orders only, on the day they closed**, so Truck 360, the fleet board and the reports agree with the ledger.
+- **Workshop invoice scan:** attach the invoice (PDF or photo, up to 10 MB) on the order's page; it is stored with the truck documents in R2 and opens through `/files/work-order/<id>`.
+- **الصيانة الدورية (`/maintenance/schedules`):** every truck's periodic services (every so many km and/or days), the last time done (and on which order), the next due point and what is left. The manager and the dispatcher add, change, pause or delete them.
+- **Who:** the manager, accountant and dispatcher open orders and add lines; only the manager and accountant close or reopen them. Drivers see none of it.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -316,6 +336,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   20. supplier payments and issued cheques posted as journal entries; discount received account (4104); supplier balances
   21. driving licence scan on the driver
   22. opening balances: opening date, balances per account/customer/supplier posted as one entry, opening driver advances and cheques
+  23. maintenance work orders: open → closed (manager or accountant, with the workshop invoice and payment) → posted; reopen and cancel; services marked done; truck profit counts closed orders
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;

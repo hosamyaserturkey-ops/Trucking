@@ -63,6 +63,20 @@ export const WORK_ORDER_STATUS: Record<string, { label: string; tone: Tone }> = 
   cancelled: { label: "ملغى", tone: "neutral" },
 };
 
+export const WORK_ORDER_LINE_TYPE: Record<string, string> = {
+  part: "قطع غيار",
+  labor: "أجور",
+  tire: "إطارات",
+  other: "أخرى",
+};
+
+// How a workshop's invoice is paid when its work order is closed.
+export const WO_PAYMENT_METHOD: Record<string, string> = {
+  credit: "آجل على حساب الورشة",
+  cash: "نقداً",
+  bank: "تحويل بنكي",
+};
+
 export const PAYMENT_METHOD: Record<string, string> = {
   cash: "نقداً",
   card: "بطاقة",

@@ -6,11 +6,24 @@ import { attachUpload, createUploadLink, deleteFile, discardUpload, StorageError
 // Who may upload or view which file. Every row lookup uses the signed-in
 // user's own Supabase session, so row-level security decides what they see.
 
-export type UploadPurpose = "expense_receipt" | "fuel_receipt" | "truck_document" | "customs_document" | "driver_license";
-export type ViewKind = "expense" | "fuel" | "truck-document" | "customs" | "driver-license";
+export type UploadPurpose =
+  | "expense_receipt"
+  | "fuel_receipt"
+  | "truck_document"
+  | "customs_document"
+  | "driver_license"
+  | "work_order_invoice";
+export type ViewKind = "expense" | "fuel" | "truck-document" | "customs" | "driver-license" | "work-order";
 
-export const UPLOAD_PURPOSES: UploadPurpose[] = ["expense_receipt", "fuel_receipt", "truck_document", "customs_document", "driver_license"];
-export const VIEW_KINDS: ViewKind[] = ["expense", "fuel", "truck-document", "customs", "driver-license"];
+export const UPLOAD_PURPOSES: UploadPurpose[] = [
+  "expense_receipt",
+  "fuel_receipt",
+  "truck_document",
+  "customs_document",
+  "driver_license",
+  "work_order_invoice",
+];
+export const VIEW_KINDS: ViewKind[] = ["expense", "fuel", "truck-document", "customs", "driver-license", "work-order"];
 
 export const PURPOSE_KIND: Record<UploadPurpose, FileKind> = {
   expense_receipt: "receipts",
@@ -18,6 +31,8 @@ export const PURPOSE_KIND: Record<UploadPurpose, FileKind> = {
   truck_document: "truck-documents",
   customs_document: "customs-documents",
   driver_license: "driver-documents",
+  // A workshop's invoice is filed with the truck's documents.
+  work_order_invoice: "truck-documents",
 };
 
 // Same roles that may write the rows (RLS) and the old Supabase bucket policies.
@@ -27,6 +42,7 @@ const UPLOAD_ROLES: Record<UploadPurpose, AppRole[]> = {
   truck_document: ["manager", "dispatcher"],
   customs_document: ["manager", "accountant", "dispatcher"],
   driver_license: ["manager", "accountant", "dispatcher"],
+  work_order_invoice: ["manager", "accountant", "dispatcher"],
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -78,6 +94,10 @@ async function loadRecord(purpose: UploadPurpose, id: string): Promise<RecordSta
   if (purpose === "driver_license") {
     const { data } = await supabase.from("drivers").select("id").eq("id", id).maybeSingle();
     return data ? {} : null;
+  }
+  if (purpose === "work_order_invoice") {
+    const { data } = await supabase.from("work_orders").select("id, status").eq("id", id).maybeSingle();
+    return data && data.status !== "cancelled" ? {} : null;
   }
   const { data } = await supabase.from("truck_documents").select("id").eq("id", id).maybeSingle();
   return data ? {} : null;
@@ -139,6 +159,10 @@ export async function loadFileRow(kind: ViewKind, id: string): Promise<{ kind: F
   if (kind === "driver-license") {
     const { data } = await supabase.from("drivers").select("license_file_path").eq("id", id).maybeSingle();
     return data?.license_file_path ? { kind: "driver-documents", path: data.license_file_path } : null;
+  }
+  if (kind === "work-order") {
+    const { data } = await supabase.from("work_orders").select("invoice_path").eq("id", id).maybeSingle();
+    return data?.invoice_path ? { kind: "truck-documents", path: data.invoice_path } : null;
   }
   const { data } = await supabase.from("truck_documents").select("file_path").eq("id", id).maybeSingle();
   return data?.file_path ? { kind: "truck-documents", path: data.file_path } : null;

@@ -1536,6 +1536,7 @@ export type Database = {
           is_active: boolean
           last_done_odometer: number | null
           last_done_on: string | null
+          last_work_order_id: string | null
           service_name: string
           truck_id: string
           updated_at: string
@@ -1548,6 +1549,7 @@ export type Database = {
           is_active?: boolean
           last_done_odometer?: number | null
           last_done_on?: string | null
+          last_work_order_id?: string | null
           service_name: string
           truck_id: string
           updated_at?: string
@@ -1560,11 +1562,26 @@ export type Database = {
           is_active?: boolean
           last_done_odometer?: number | null
           last_done_on?: string | null
+          last_work_order_id?: string | null
           service_name?: string
           truck_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_schedules_last_work_order_id_fkey"
+            columns: ["last_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "truck_overview_v"
+            referencedColumns: ["open_work_order_id"]
+          },
+          {
+            foreignKeyName: "service_schedules_last_work_order_id_fkey"
+            columns: ["last_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_schedules_truck_id_fkey"
             columns: ["truck_id"]
@@ -2273,6 +2290,8 @@ export type Database = {
       }
       work_orders: {
         Row: {
+          cancel_reason: string | null
+          closed_by: string | null
           closed_on: string | null
           created_at: string
           created_by: string | null
@@ -2283,17 +2302,23 @@ export type Database = {
           invoice_no: string | null
           invoice_path: string | null
           kind: Database["public"]["Enums"]["work_order_kind"]
+          notes: string | null
+          notice_no: string | null
           odometer: number | null
           opened_on: string
+          payment_method: string | null
           status: Database["public"]["Enums"]["work_order_status"]
           total_base_minor: number
           total_minor: number
           truck_id: string
           updated_at: string
+          voucher_no: string | null
           wo_no: number
           workshop_id: string | null
         }
         Insert: {
+          cancel_reason?: string | null
+          closed_by?: string | null
           closed_on?: string | null
           created_at?: string
           created_by?: string | null
@@ -2304,17 +2329,23 @@ export type Database = {
           invoice_no?: string | null
           invoice_path?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
+          notes?: string | null
+          notice_no?: string | null
           odometer?: number | null
           opened_on: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           total_base_minor?: number
           total_minor?: number
           truck_id: string
           updated_at?: string
+          voucher_no?: string | null
           wo_no?: never
           workshop_id?: string | null
         }
         Update: {
+          cancel_reason?: string | null
+          closed_by?: string | null
           closed_on?: string | null
           created_at?: string
           created_by?: string | null
@@ -2325,13 +2356,17 @@ export type Database = {
           invoice_no?: string | null
           invoice_path?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
+          notes?: string | null
+          notice_no?: string | null
           odometer?: number | null
           opened_on?: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           total_base_minor?: number
           total_minor?: number
           truck_id?: string
           updated_at?: string
+          voucher_no?: string | null
           wo_no?: never
           workshop_id?: string | null
         }
@@ -2776,6 +2811,7 @@ export type Database = {
           truck_code: string | null
           truck_id: string | null
           voucher_no: string | null
+          wo_no: number | null
         }
         Relationships: [
           {
@@ -3031,6 +3067,18 @@ export type Database = {
       }
       cancel_invoice: {
         Args: { p_invoice_id: string; p_reason: string }
+        Returns: undefined
+      }
+      close_work_order: {
+        Args: {
+          p_closed_on: string
+          p_invoice_no?: string
+          p_notice_no?: string
+          p_payment_method: string
+          p_schedule_ids?: string[]
+          p_voucher_no?: string
+          p_work_order_id: string
+        }
         Returns: undefined
       }
       create_invoice: {

@@ -29,6 +29,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { NavItem } from "@/lib/roles";
@@ -60,6 +61,7 @@ const ICONS: Record<string, LucideIcon> = {
   handcoins: HandCoins,
   settings: Settings,
   stamp: Stamp,
+  wrench: Wrench,
 };
 
 function isActive(pathname: string, href: string) {
