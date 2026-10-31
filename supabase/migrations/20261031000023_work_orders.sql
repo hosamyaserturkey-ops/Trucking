@@ -497,8 +497,8 @@ do $$
 declare
   r record;
 begin
-  for r in select w.* from public.work_orders w where w.status = 'closed' order by w.closed_on, w.wo_no loop
-    perform app.post_work_order_row(r, null);
+  for r in select w.id from public.work_orders w where w.status = 'closed' order by w.closed_on, w.wo_no loop
+    perform app.post_work_order_row((select w from public.work_orders w where w.id = r.id), null);
   end loop;
 end;
 $$;

@@ -393,6 +393,7 @@ export type Database = {
           customs_portal_url: string | null
           fuel_anomaly_threshold_pct: number
           id: boolean
+          jofotara_income_source: string | null
           opening_date: string | null
           overhead_allocation: string
           phone: string | null
@@ -408,6 +409,7 @@ export type Database = {
           customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
+          jofotara_income_source?: string | null
           opening_date?: string | null
           overhead_allocation?: string
           phone?: string | null
@@ -423,6 +425,7 @@ export type Database = {
           customs_portal_url?: string | null
           fuel_anomaly_threshold_pct?: number
           id?: boolean
+          jofotara_income_source?: string | null
           opening_date?: string | null
           overhead_allocation?: string
           phone?: string | null
@@ -752,6 +755,83 @@ export type Database = {
             columns: ["default_truck_id"]
             isOneToOne: false
             referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      einvoices: {
+        Row: {
+          attempts: number
+          created_at: string
+          created_by: string | null
+          doc_no: string
+          einv_num: string | null
+          einv_qr: string | null
+          einv_uuid: string | null
+          icv: number
+          id: string
+          invoice_id: string
+          issue_date: string
+          kind: string
+          last_attempt_at: string | null
+          last_error: string | null
+          reason: string | null
+          response: Json | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          xml_sha256: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          doc_no: string
+          einv_num?: string | null
+          einv_qr?: string | null
+          einv_uuid?: string | null
+          icv?: never
+          id?: string
+          invoice_id: string
+          issue_date: string
+          kind: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          reason?: string | null
+          response?: Json | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          xml_sha256?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          doc_no?: string
+          einv_num?: string | null
+          einv_qr?: string | null
+          einv_uuid?: string | null
+          icv?: never
+          id?: string
+          invoice_id?: string
+          issue_date?: string
+          kind?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          reason?: string | null
+          response?: Json | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          xml_sha256?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "einvoices_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -1221,6 +1301,7 @@ export type Database = {
           load_date: string
           route: string | null
           trip_id: string | null
+          vat_minor: number | null
         }
         Insert: {
           amount_minor: number
@@ -1237,6 +1318,7 @@ export type Database = {
           load_date: string
           route?: string | null
           trip_id?: string | null
+          vat_minor?: number | null
         }
         Update: {
           amount_minor?: number
@@ -1253,6 +1335,7 @@ export type Database = {
           load_date?: string
           route?: string | null
           trip_id?: string | null
+          vat_minor?: number | null
         }
         Relationships: [
           {
@@ -3443,6 +3526,23 @@ export type Database = {
       driver_trip_action: {
         Args: { p_action: string; p_odometer: number; p_trip_id: string }
         Returns: string
+      }
+      einvoice_prepare: {
+        Args: { p_invoice_id: string; p_kind: string }
+        Returns: Database["public"]["Tables"]["einvoices"]["Row"]
+      }
+      einvoice_record: {
+        Args: {
+          p_accepted: boolean
+          p_einv_num?: string
+          p_einv_qr?: string
+          p_einv_uuid?: string
+          p_einvoice_id: string
+          p_error?: string
+          p_response?: Json
+          p_xml_sha256?: string
+        }
+        Returns: Database["public"]["Tables"]["einvoices"]["Row"]
       }
       generate_installments: {
         Args: { p_financing_id: string }

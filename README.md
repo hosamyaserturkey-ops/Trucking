@@ -220,6 +220,27 @@ Both reports read the same figures as Truck 360 and the fleet board (closed work
 - **Closing:** when the difference is zero and every bank line is matched, the statement is closed. It then never changes, and an entry matched in it cannot be reversed (e.g. by editing a bank receipt) until it is reopened. While a statement is open, reversing a matched entry undoes the match so its line shows up again.
 - **Printing:** an A4 reconciliation statement with both sides, the outstanding items and signature lines (`/print/bank/<id>`).
 
+## JoFotara e-invoicing (الفوترة الإلكترونية — جوفوترة)
+
+Customer invoices are sent to the national e-invoicing system of the Income and Sales Tax Department, and the QR code it returns is printed on the tax invoice. Manager and accountant only.
+
+- **Sending (`/invoices/<id>` → «إرسال الفاتورة إلى جوفوترة»):** the invoice becomes a UBL 2.1 file (a general sales tax invoice on account, `InvoiceTypeCode name="022"`, 388), base64-encoded and posted to `https://backend.jofotara.gov.jo/core/invoices/` with the `Client-Id` and `Secret-Key` headers.
+  - **Accepted** (`SUBMITTED`, or `ALREADY_SUBMITTED` for a resend): JoFotara's number, its UUID and the QR code are kept for good, and the QR prints on the A4 tax invoice.
+  - **Rejected:** its reasons show on the invoice; fix the data and send again. The same document (same UUID and invoice counter) is reused for every attempt.
+  - **Before sending,** the page lists anything missing: the company's tax number and income source sequence, the customer's tax number.
+  - **«ملف XML»** downloads the file to check it, before or after sending.
+- **What goes in the file:** the invoice number, its own UUID, the invoice counter (ICV, one per document), the seller (tax number, name, income source sequence), the customer (tax number as `TN`, name, governorate code from the city, phone), and one line per load (route, cargo, references) with its tax. Amounts are JOD with 3 decimals; an exempt customer's lines are category `Z` at 0%.
+- **Sales tax is now worked out line by line** (each load's tax rounded to the fils, then summed), because JoFotara checks that the invoice's tax is the sum of its lines' tax and that the totals are the sum of the lines' totals. Invoices issued before keep their totals; their tax is spread over the lines exactly when they are sent.
+- **Cancelling a sent invoice** leaves a **credit note (فاتورة إرجاع, 381)** to send, numbered `R-<invoice number>`, referring to the original invoice and carrying the cancellation reason. An invoice cancelled before it was sent needs nothing.
+- **The invoices list** shows each invoice's JoFotara status (مقبولة / لم تُرسل / مرفوضة / إرجاع لم يُرسل).
+- **Setting it up:**
+  1. On the JoFotara portal, register the company's activity and take its **income source sequence (تسلسل مصدر الدخل)**; enter it under **بيانات الشركة** with the company's tax number.
+  2. On the portal, link a system (ربط الأنظمة) and take the **Client ID** and **Secret Key**.
+  3. Set them where the app runs as **secrets**, never in the database or with a `NEXT_PUBLIC_` prefix: `JOFOTARA_CLIENT_ID` and `JOFOTARA_SECRET_KEY` (Cloudflare: Workers & Pages → trucking → Settings → Variables and Secrets, type Secret). `JOFOTARA_URL` changes the address only if ISTD gives another one.
+  4. Every customer that is invoiced needs its tax number under العملاء.
+  5. **Every accepted invoice is real and reported to the tax department.** There is no test mode: send a first real invoice, check it on the portal, then carry on.
+- Built from ISTD's technical guide as published; the file and its rules (`src/lib/jofotara-xml.ts`) are unit-tested, but sending has not been tried against the live system from here. If JoFotara rejects the first invoice, its reason shows on the invoice page.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -323,7 +344,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
    - Non-production branch deploy command: `npx opennextjs-cloudflare upload`
    - Root directory: leave it as `/`.
 2. **Build** → **Variables and secrets** (used while building): add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Next.js puts these two public values into the pages at build time.
-3. **Variables and Secrets** (used while running): add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`, each as type **Secret**.
+3. **Variables and Secrets** (used while running): add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`, each as type **Secret**; and, when the company is ready to send e-invoices, `JOFOTARA_CLIENT_ID` and `JOFOTARA_SECRET_KEY` (see JoFotara above).
 4. **Domains & Routes:** note the `workers.dev` address and add it to the R2 bucket's CORS rule (step 3 above), so phones can upload receipts from it.
 5. **Retry the latest build**, or push a commit.
 
@@ -369,6 +390,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   23. maintenance work orders: open → closed (manager or accountant, with the workshop invoice and payment) → posted; reopen and cancel; services marked done; truck profit counts closed orders
   24. truck and customer profit reports: per truck, per month, per customer (direct costs plus the truck-month's other costs shared by revenue, loads or km; idle trucks apart)
   25. bank reconciliation: bank statements and lines, matches with ledger lines on 1102, outstanding items as of a day, posting bank lines, closing and reopening; bank charges account (5204)
+  26. JoFotara: e-invoice documents (invoice and credit note, UUID, invoice counter, JoFotara's answer and QR), sales tax per invoice line, income source sequence setting
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
@@ -390,9 +412,5 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 
 ## Next phases
 
-- **4:** work orders, documents and alerts (WhatsApp/SMS).
-- **5:** JoFotara (Jordan e-invoicing).
-- **6:** manual journal entries, period closing, bank reconciliation.
-- **7:** payroll.
-- **8:** reports and exports.
-- **9:** hardening.
+- Done since: work orders, JoFotara, bank reconciliation, truck and customer profit reports.
+- **Next:** tire stock and fitting from work orders, alerts by WhatsApp/SMS, manual journal entries and period closing, payroll, hardening.
