@@ -58,6 +58,187 @@ export type Database = {
           },
         ]
       }
+      bank_match_lines: {
+        Row: {
+          journal_line_id: string
+          match_id: string
+        }
+        Insert: {
+          journal_line_id: string
+          match_id: string
+        }
+        Update: {
+          journal_line_id?: string
+          match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_match_lines_journal_line_id_fkey"
+            columns: ["journal_line_id"]
+            isOneToOne: true
+            referencedRelation: "journal_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_match_lines_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "bank_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_matches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          statement_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          statement_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_matches_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_statement_lines: {
+        Row: {
+          amount_minor: number
+          balance_minor: number | null
+          description: string
+          id: string
+          line_no: number
+          match_id: string | null
+          reference: string | null
+          statement_id: string
+          txn_date: string
+          value_date: string | null
+        }
+        Insert: {
+          amount_minor: number
+          balance_minor?: number | null
+          description?: string
+          id?: string
+          line_no: number
+          match_id?: string | null
+          reference?: string | null
+          statement_id: string
+          txn_date: string
+          value_date?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          balance_minor?: number | null
+          description?: string
+          id?: string
+          line_no?: number
+          match_id?: string | null
+          reference?: string | null
+          statement_id?: string
+          txn_date?: string
+          value_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statement_lines_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "bank_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_statements: {
+        Row: {
+          account_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_balance_minor: number
+          created_at: string
+          created_by: string | null
+          id: string
+          lines_count: number
+          notes: string | null
+          opening_balance_minor: number
+          period_from: string
+          period_to: string
+          source_name: string | null
+          statement_no: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance_minor?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lines_count?: number
+          notes?: string | null
+          opening_balance_minor: number
+          period_from: string
+          period_to: string
+          source_name?: string | null
+          statement_no?: never
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance_minor?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lines_count?: number
+          notes?: string | null
+          opening_balance_minor?: number
+          period_from?: string
+          period_to?: string
+          source_name?: string | null
+          statement_no?: never
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_receipts: {
         Row: {
           amount_minor: number
@@ -2425,6 +2606,46 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_book_lines_v: {
+        Row: {
+          account_id: string | null
+          amount_minor: number | null
+          cheque_no: string | null
+          entry_date: string | null
+          entry_description: string | null
+          entry_id: string | null
+          entry_no: number | null
+          id: string | null
+          invoice_no: number | null
+          is_cancelled: boolean | null
+          is_opening: boolean | null
+          match_id: string | null
+          notice_no: string | null
+          party: string | null
+          payment_no: number | null
+          receipt_no: number | null
+          reference_no: string | null
+          reverses_entry_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["journal_status"] | null
+          voucher_no: string | null
+        }
+        Relationships: []
+      }
+      bank_matches_v: {
+        Row: {
+          account_id: string | null
+          bank_minor: number | null
+          book_minor: number | null
+          created_at: string | null
+          done_on: string | null
+          id: string | null
+          kind: string | null
+          statement_id: string | null
+        }
+        Relationships: []
+      }
       client_balance_v: {
         Row: {
           balance_minor: number | null
@@ -3065,6 +3286,96 @@ export type Database = {
         }
         Returns: number
       }
+      bank_match: {
+        Args: {
+          p_bank_line_ids: string[]
+          p_journal_line_ids: string[]
+          p_statement_id: string
+        }
+        Returns: string
+      }
+      bank_match_pairs: {
+        Args: { p_pairs: Json; p_statement_id: string }
+        Returns: number
+      }
+      bank_outstanding: {
+        Args: { p_account_id: string; p_as_of: string }
+        Returns: {
+          amount_minor: number
+          description: string
+          entry_no: number
+          line_date: string
+          line_id: string
+          match_id: string
+          reference: string
+          side: string
+          source_id: string
+          source_type: string
+        }[]
+      }
+      bank_post_line: {
+        Args: {
+          p_account_id: string
+          p_description?: string
+          p_line_id: string
+          p_truck_id?: string
+        }
+        Returns: string
+      }
+      bank_reconciliation: {
+        Args: { p_statement_id: string }
+        Returns: {
+          account_id: string
+          as_of: string
+          bank_balance_minor: number
+          book_balance_minor: number
+          difference_minor: number
+          outstanding_in_minor: number
+          outstanding_out_minor: number
+          unmatched_lines: number
+          unrecorded_in_minor: number
+          unrecorded_out_minor: number
+        }[]
+      }
+      bank_statement_add_line: {
+        Args: {
+          p_amount_minor: number
+          p_description?: string
+          p_reference?: string
+          p_statement_id: string
+          p_txn_date: string
+        }
+        Returns: string
+      }
+      bank_statement_close: {
+        Args: { p_statement_id: string }
+        Returns: undefined
+      }
+      bank_statement_create: {
+        Args: {
+          p_account_id: string
+          p_lines: Json
+          p_notes?: string
+          p_opening_minor: number
+          p_period_from: string
+          p_period_to: string
+          p_source_name?: string
+        }
+        Returns: string
+      }
+      bank_statement_delete: {
+        Args: { p_statement_id: string }
+        Returns: undefined
+      }
+      bank_statement_delete_line: {
+        Args: { p_line_id: string }
+        Returns: undefined
+      }
+      bank_statement_reopen: {
+        Args: { p_statement_id: string }
+        Returns: undefined
+      }
+      bank_unmatch: { Args: { p_match_id: string }; Returns: undefined }
       cancel_invoice: {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: undefined

@@ -19,6 +19,7 @@ export const JOURNAL_SOURCE: Record<string, string> = {
   issued_cheque: "شيك صادر",
   opening: "أرصدة افتتاحية",
   work_order: "أمر صيانة",
+  bank_line: "من كشف البنك",
   depreciation: "استهلاك",
 };
 

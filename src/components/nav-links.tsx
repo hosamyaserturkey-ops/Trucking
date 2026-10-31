@@ -10,6 +10,7 @@ import {
   ChartColumn,
   CircleCheck,
   ClipboardList,
+  FileCheck,
   FileSpreadsheet,
   FileText,
   Flag,
@@ -64,6 +65,7 @@ const ICONS: Record<string, LucideIcon> = {
   stamp: Stamp,
   wrench: Wrench,
   chart: ChartColumn,
+  bankcheck: FileCheck,
 };
 
 function isActive(pathname: string, href: string) {

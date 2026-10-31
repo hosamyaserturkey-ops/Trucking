@@ -203,6 +203,23 @@ Both reports read the same figures as Truck 360 and the fleet board (closed work
   - Each customer opens their loads (`/reports/clients/<id>`): date, reference, truck, route, cargo, freight, direct costs, share of the truck's costs, profit and margin per load.
 - In the database: `truck_profit_report`, `truck_profit_monthly`, `client_profit_report` and `client_profit_trips` (migration 24), summed in Postgres because the API returns at most 1,000 rows.
 
+## Bank reconciliation (مطابقة كشف البنك)
+
+- **مطابقة البنك (`/bank`):** each bank statement with its period, opening and closing balances, lines, what is still unmatched and the difference. Manager and accountant only.
+- **Entering a statement:**
+  - Pick the bank's **Excel (.xlsx) or CSV** file. It is read in the browser: the header row is found by its names (التاريخ / البيان / المرجع / مدين / دائن / المبلغ / الرصيد, or Date / Description / Reference / Debit / Credit / Amount / Balance, and their usual variants), amounts like `1,250.500`, `(75.25)`, `75.25-` or `40 DR` are understood, Arabic CSV files saved as Windows-1256 are decoded, and a file listed newest first is put in order. Opening and closing balance rows are taken as balances, not movements.
+  - Check the preview, the period (from the dates in the file), the opening balance (from the file or the previous statement's closing) and the bank's printed closing balance: the statement is not saved while the computed closing differs from it.
+  - Or save an empty statement and type its lines. A blank template can be downloaded.
+  - Statements of one account don't overlap; a gap or a different opening balance from the previous statement is pointed out.
+- **Matching (`/bank/<id>`):**
+  - **مطابقة تلقائية** pairs lines one to one with the same amount within 10 days, a line carrying the cheque, notice or voucher number first. Review what it did; any match can be undone.
+  - By hand: tick lines on both sides with the same total (one deposit of several cheques, a payment split in two, or a ledger entry and its later reversal) and **مطابقة المحدد**. Ticking a bank line narrows the ledger side to the same amount.
+  - A bank line the books don't have yet (charges, interest) is **posted from the statement** against an account (5204 مصاريف وعمولات بنكية, new; or 4102 for interest, or any other, optionally on a truck) and matched in one step. Customer, supplier, advance and cheque movements are entered in their own screens first, then matched.
+- **The reconciliation, as of the statement's last day:** the bank's balance, plus deposits in the books not yet in the bank, minus payments and cheques not yet presented, against the book balance plus or minus bank movements not yet in the books. The difference does not depend on matching: if it isn't zero, the opening balance or a missing movement is the cause.
+  - Ledger lines before the first statement that were never matched are taken as cleared before it; the opening entry is a balance, not a movement; an entry reversed on its own day cancels out.
+- **Closing:** when the difference is zero and every bank line is matched, the statement is closed. It then never changes, and an entry matched in it cannot be reversed (e.g. by editing a bank receipt) until it is reopened. While a statement is open, reversing a matched entry undoes the match so its line shows up again.
+- **Printing:** an A4 reconciliation statement with both sides, the outstanding items and signature lines (`/print/bank/<id>`).
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -351,6 +368,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   22. opening balances: opening date, balances per account/customer/supplier posted as one entry, opening driver advances and cheques
   23. maintenance work orders: open → closed (manager or accountant, with the workshop invoice and payment) → posted; reopen and cancel; services marked done; truck profit counts closed orders
   24. truck and customer profit reports: per truck, per month, per customer (direct costs plus the truck-month's other costs shared by revenue, loads or km; idle trucks apart)
+  25. bank reconciliation: bank statements and lines, matches with ledger lines on 1102, outstanding items as of a day, posting bank lines, closing and reopening; bank charges account (5204)
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
