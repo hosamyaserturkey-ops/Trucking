@@ -190,6 +190,19 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **الصيانة الدورية (`/maintenance/schedules`):** every truck's periodic services (every so many km and/or days), the last time done (and on which order), the next due point and what is left. The manager and the dispatcher add, change, pause or delete them.
 - **Who:** the manager, accountant and dispatcher open orders and add lines; only the manager and accountant close or reopen them. Drivers see none of it.
 
+## Truck and customer profit reports (تقارير الربح)
+
+Both reports read the same figures as Truck 360 and the fleet board (closed work orders, approved expenses and fill-ups, overhead shares, depreciation, interest), for this month, this year or any range, with Excel export and A4 printing. Manager and accountant only.
+
+- **ربح الشاحنات (`/reports/trucks`):** per truck: trips, km, revenue, diesel, maintenance, direct expenses, overhead share, depreciation, interest, total costs, net profit, margin, cost per km and profit per km, best first, with a totals line. For more than one month, a fleet chart and each truck's net profit month by month.
+- **ربح الزبائن (`/reports/clients`):** per customer: loads, tons, revenue and share of revenue, direct costs, the trucks' costs shared to them, net profit, margin and profit per load.
+  - **Direct costs:** diesel and expenses entered against one of the customer's loads (e.g. a border toll).
+  - **Shared costs:** every other cost of a truck in a month is shared among that truck's loads of that month, **by revenue** (default), **by number of loads**, or **by km** (falls back to revenue when the loads have no km, as loading-sheet lines don't). Exact to the fils.
+  - **Idle trucks:** a truck's costs in a month it carried nothing are shown on their own line, never charged to a customer. Loads with no customer have their own line too.
+  - **The totals equal the fleet's net profit** in the truck report for the same period, whichever basis is chosen.
+  - Each customer opens their loads (`/reports/clients/<id>`): date, reference, truck, route, cargo, freight, direct costs, share of the truck's costs, profit and margin per load.
+- In the database: `truck_profit_report`, `truck_profit_monthly`, `client_profit_report` and `client_profit_trips` (migration 24), summed in Postgres because the API returns at most 1,000 rows.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -337,6 +350,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   21. driving licence scan on the driver
   22. opening balances: opening date, balances per account/customer/supplier posted as one entry, opening driver advances and cheques
   23. maintenance work orders: open → closed (manager or accountant, with the workshop invoice and payment) → posted; reopen and cancel; services marked done; truck profit counts closed orders
+  24. truck and customer profit reports: per truck, per month, per customer (direct costs plus the truck-month's other costs shared by revenue, loads or km; idle trucks apart)
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;

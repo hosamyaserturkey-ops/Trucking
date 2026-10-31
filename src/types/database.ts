@@ -3069,6 +3069,45 @@ export type Database = {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: undefined
       }
+      client_profit_report: {
+        Args: { p_basis?: string; p_from: string; p_to: string }
+        Returns: {
+          allocated_minor: number
+          client_id: string
+          direct_minor: number
+          is_idle: boolean
+          km: number
+          loads: number
+          profit_minor: number
+          revenue_minor: number
+          tons: number
+        }[]
+      }
+      client_profit_trips: {
+        Args: {
+          p_basis: string
+          p_client_id: string
+          p_from: string
+          p_to: string
+        }
+        Returns: {
+          allocated_minor: number
+          cargo_description: string
+          client_doc_no: string
+          client_ref: string
+          direct_minor: number
+          entry_source: string
+          fact_date: string
+          km: number
+          profit_minor: number
+          revenue_minor: number
+          route: string
+          tons: number
+          trip_id: string
+          trip_no: number
+          truck_id: string
+        }[]
+      }
       close_work_order: {
         Args: {
           p_closed_on: string
@@ -3135,6 +3174,34 @@ export type Database = {
         Returns: {
           amount_base_minor: number
           kind: string
+          truck_id: string
+        }[]
+      }
+      truck_profit_monthly: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          costs_minor: number
+          month: string
+          revenue_minor: number
+          truck_id: string
+        }[]
+      }
+      truck_profit_report: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          costs_minor: number
+          depreciation_minor: number
+          expense_minor: number
+          fuel_minor: number
+          interest_minor: number
+          km: number
+          loaded_trips: number
+          maintenance_minor: number
+          overhead_minor: number
+          profit_minor: number
+          revenue_minor: number
+          tons: number
+          trips: number
           truck_id: string
         }[]
       }

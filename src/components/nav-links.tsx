@@ -7,6 +7,7 @@ import {
   BookOpen,
   BookText,
   Building2,
+  ChartColumn,
   CircleCheck,
   ClipboardList,
   FileSpreadsheet,
@@ -62,6 +63,7 @@ const ICONS: Record<string, LucideIcon> = {
   settings: Settings,
   stamp: Stamp,
   wrench: Wrench,
+  chart: ChartColumn,
 };
 
 function isActive(pathname: string, href: string) {
