@@ -7,8 +7,10 @@ import {
   BookOpen,
   BookText,
   Building2,
+  ChartColumn,
   CircleCheck,
   ClipboardList,
+  FileCheck,
   FileSpreadsheet,
   FileText,
   Flag,
@@ -29,6 +31,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { NavItem } from "@/lib/roles";
@@ -60,6 +63,9 @@ const ICONS: Record<string, LucideIcon> = {
   handcoins: HandCoins,
   settings: Settings,
   stamp: Stamp,
+  wrench: Wrench,
+  chart: ChartColumn,
+  bankcheck: FileCheck,
 };
 
 function isActive(pathname: string, href: string) {

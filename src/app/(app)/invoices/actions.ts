@@ -8,6 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { toLatinDigits } from "@/lib/money";
 import { describeDbError } from "@/lib/master-data-parse";
+import { loadEinvoiceInput } from "@/lib/einvoice-data";
+import { base64Utf8, buildEinvoiceXml, readJoFotaraResponse } from "@/lib/jofotara-xml";
+import { jofotaraConfig, responseToStore, sendEinvoice, sha256Hex } from "@/lib/jofotara";
+import type { Json } from "@/types/database";
 
 export type InvoiceFormState = { error: string | null; done?: boolean };
 
@@ -54,4 +58,45 @@ export async function cancelInvoice(id: string, _prev: InvoiceFormState, formDat
   if (error) return { error: dbMessage(error) };
   revalidatePath("/", "layout");
   return { error: null, done: true };
+}
+
+export type EinvoiceState = { error: string | null; done?: boolean; message?: string };
+
+/**
+ * Send an invoice (or the credit note of a cancelled one) to JoFotara and
+ * keep its answer. The same document (UUID and counter) is reused on retries.
+ */
+export async function submitEinvoice(invoiceId: string, kind: "invoice" | "credit_note"): Promise<EinvoiceState> {
+  await requireRole(...FINANCE_ROLES);
+  if (!UUID.test(invoiceId) || (kind !== "invoice" && kind !== "credit_note")) return { error: "طلب غير صحيح" };
+  const config = jofotaraConfig();
+  if (!config) return { error: "لم تُضبط بيانات الربط مع نظام الفوترة الوطني على الخادم (JOFOTARA_CLIENT_ID و JOFOTARA_SECRET_KEY)" };
+  const supabase = await createClient();
+  const { data: doc, error: prepError } = await supabase.rpc("einvoice_prepare", { p_invoice_id: invoiceId, p_kind: kind });
+  if (prepError || !doc) return { error: prepError ? dbMessage(prepError) : "تعذر تجهيز الفاتورة الإلكترونية" };
+  if (doc.status === "submitted") return { error: null, done: true, message: "أُرسلت وقُبلت سابقاً" };
+
+  const { input, problems } = await loadEinvoiceInput(supabase, invoiceId, kind, doc);
+  if (!input || problems.length) return { error: problems.join("\n") };
+  const xml = buildEinvoiceXml(input);
+  const sent = await sendEinvoice(base64Utf8(xml), config);
+  const outcome = "error" in sent ? ({ accepted: false, message: sent.error } as const) : readJoFotaraResponse(sent.httpStatus, sent.body);
+  const { error: recError } = await supabase.rpc("einvoice_record", {
+    p_einvoice_id: doc.id,
+    p_accepted: outcome.accepted,
+    p_error: outcome.accepted ? undefined : outcome.message,
+    p_einv_uuid: outcome.accepted ? (outcome.uuid ?? undefined) : undefined,
+    p_einv_num: outcome.accepted ? (outcome.num ?? undefined) : undefined,
+    p_einv_qr: outcome.accepted ? (outcome.qr ?? undefined) : undefined,
+    p_response: ("error" in sent ? { error: sent.error } : responseToStore(sent.body)) as Json,
+    p_xml_sha256: await sha256Hex(xml),
+  });
+  revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath("/invoices");
+  if (recError) {
+    // JoFotara answered but the answer could not be saved: say so plainly, it must not be lost.
+    return { error: `ردّ نظام الفوترة (${outcome.accepted ? "مقبولة" : "مرفوضة"}) لكن تعذر حفظ الرد: ${dbMessage(recError)}. أعد الإرسال؛ سيُعرف أنها مرسلة.` };
+  }
+  if (!outcome.accepted) return { error: `رفض نظام الفوترة الوطني الفاتورة:\n${outcome.message}` };
+  return { error: null, done: true, message: outcome.message ?? "قُبلت الفاتورة في نظام الفوترة الوطني" };
 }

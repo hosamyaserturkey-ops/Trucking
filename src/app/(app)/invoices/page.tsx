@@ -33,7 +33,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
   const supabase = await createClient();
   let q = supabase
     .from("invoices")
-    .select("id, invoice_no, invoice_date, due_date, period_from, period_to, lines_count, subtotal_minor, vat_minor, total_minor, status, client:clients(name)")
+    .select("id, invoice_no, invoice_date, due_date, period_from, period_to, lines_count, subtotal_minor, vat_minor, total_minor, status, client:clients(name), einvoices(kind, status, last_error)")
     .gte("invoice_date", f.from)
     .lte("invoice_date", f.to)
     .order("invoice_date", { ascending: false })
@@ -48,6 +48,18 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
   ]);
   const rows = invRes.data ?? [];
   const issued = rows.filter((r) => r.status === "issued");
+  const einvoice = (r: (typeof rows)[number]) => {
+    const docs = (r.einvoices ?? []) as { kind: string; status: string; last_error: string | null }[];
+    const inv = docs.find((d) => d.kind === "invoice");
+    const credit = docs.find((d) => d.kind === "credit_note");
+    if (r.status === "cancelled") {
+      if (inv?.status !== "submitted") return null;
+      return credit?.status === "submitted" ? { label: "أُرسل الإرجاع", tone: "neutral" as const } : { label: "إرجاع لم يُرسل", tone: "danger" as const };
+    }
+    if (inv?.status === "submitted") return { label: "مقبولة", tone: "success" as const };
+    return inv?.last_error ? { label: "مرفوضة", tone: "danger" as const } : { label: "لم تُرسل", tone: "warning" as const };
+  };
+  const unsent = rows.filter((r) => einvoice(r)?.tone === "warning" || einvoice(r)?.tone === "danger").length;
   const unbilledLoads = (unbilledRes.data ?? []).reduce((s, r) => s + (r.unbilled_loads ?? 0), 0);
   const unbilledMinor = sumMinor((unbilledRes.data ?? []).map((r) => r.unbilled_minor));
 
@@ -113,7 +125,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
         </StatGrid>
 
         <Card>
-          <CardHeader title="سجل الفواتير" action={<ExportButton tableId="invoices-table" file="invoices" title={`الفواتير من ${formatDate(f.from)} إلى ${formatDate(f.to)}`} />} />
+          <CardHeader
+            title="سجل الفواتير"
+            subtitle={unsent ? `${formatInt(unsent)} فاتورة أو إرجاع لم يُقبل بعد في جوفوترة` : undefined}
+            action={<ExportButton tableId="invoices-table" file="invoices" title={`الفواتير من ${formatDate(f.from)} إلى ${formatDate(f.to)}`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد فواتير في هذه الفترة.</EmptyState>
           ) : (
@@ -130,6 +145,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
                   <Th className="text-end">الإجمالي</Th>
                   <Th>الاستحقاق</Th>
                   <Th>الحالة</Th>
+                  <Th>جوفوترة</Th>
                 </tr>
               </thead>
               <tbody>
@@ -154,6 +170,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Sea
                       <Td className="num whitespace-nowrap">{formatDate(r.due_date)}</Td>
                       <Td>
                         <Badge tone={st.tone}>{st.label}</Badge>
+                      </Td>
+                      <Td>
+                        {(() => {
+                          const e = einvoice(r);
+                          return e ? <Badge tone={e.tone}>{e.label}</Badge> : <span className="text-muted">—</span>;
+                        })()}
                       </Td>
                     </Tr>
                   );

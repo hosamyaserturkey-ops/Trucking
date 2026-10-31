@@ -7,6 +7,7 @@ import { amountInWords } from "@/lib/invoicing";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDateTime, formatDecimal } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
+import { EinvoiceQr } from "@/components/einvoice-qr";
 
 export const metadata: Metadata = { title: "فاتورة" };
 
@@ -19,11 +20,13 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const supabase = await createClient();
-  const [invRes, linesRes, settingsRes] = await Promise.all([
+  const [invRes, linesRes, settingsRes, einvRes] = await Promise.all([
     supabase.from("invoices").select("*, client:clients(name, tax_number, address, city, phone)").eq("id", id).maybeSingle(),
     supabase.from("invoice_lines").select("*").eq("invoice_id", id).order("line_no"),
     supabase.from("company_settings").select("company_name, tax_number, address, phone").maybeSingle(),
+    supabase.from("einvoices").select("id, doc_no, einv_num, einv_qr, submitted_at").eq("invoice_id", id).eq("kind", "invoice").eq("status", "submitted").maybeSingle(),
   ]);
+  const einv = einvRes.data;
   const inv = invRes.data;
   if (!inv) notFound();
   const lines = linesRes.data ?? [];
@@ -154,6 +157,26 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         </table>
       </div>
       <p className="mt-2 font-semibold">{amountInWords(inv.total_minor)}</p>
+
+      {einv ? (
+        <section className="mt-4 flex items-center gap-4 border border-border p-3 break-inside-avoid">
+          {einv.einv_qr ? <EinvoiceQr text={einv.einv_qr} size={110} /> : null}
+          <div className="text-[11px]">
+            <p className="font-semibold">فاتورة مُرسلة إلى نظام الفوترة الوطني الإلكتروني (جوفوترة)</p>
+            {einv.einv_num ? (
+              <p>
+                رقم النظام: <span className="num" dir="ltr">{einv.einv_num}</span>
+              </p>
+            ) : null}
+            <p>
+              المعرّف: <span className="num" dir="ltr">{einv.id}</span>
+            </p>
+            <p>
+              قُبلت في: <span className="num">{formatDateTime(einv.submitted_at)}</span>
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <footer className="mt-12 grid grid-cols-2 gap-10 text-sm">
         <p className="border-t border-text pt-2">المحاسب:</p>
