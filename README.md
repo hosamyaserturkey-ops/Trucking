@@ -398,7 +398,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (also loaded on the live demo).
   5. `supabase/seed_payments.sql`: monthly payments to suppliers by transfer, a paid cheque with a discount, and cheques not paid yet.
 - **Before go-live:**
-  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries) from 1.
+  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries, work orders, bank statements, the JoFotara invoice counter) from 1.
   - Run `truncate audit.log;`.
   - Empty the R2 bucket `trucking-files` (demo receipt photos), and once R2 is confirmed, remove the old Supabase Storage buckets.
   - Delete the demo users in Supabase Auth.

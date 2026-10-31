@@ -126,22 +126,22 @@ export function WorkOrderForm({
 /** Add a part, labour, tire or other line; the total shows as you type. */
 export function WorkOrderLineForm({ action, currency }: { action: Action; currency: string }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
-  const round = useResetOnDone(state);
+  const [round, setRound] = useState(0);
+  const [last, setLast] = useState<WorkOrderFormState | null>(null);
   const [qty, setQty] = useState("1");
   const [price, setPrice] = useState("");
+  // Cleared only once the line is saved; on an error what was typed stays.
+  if (state.done && state !== last) {
+    setLast(state);
+    setRound((r) => r + 1);
+    setQty("1");
+    setPrice("");
+  }
   const parsedPrice = parseMoney(price, "JOD");
   const q = Number(qty.replace(/,/g, ""));
   const total = parsedPrice !== null && q > 0 ? lineTotal(q, Number(parsedPrice)) : null;
   return (
-    <form
-      key={round}
-      action={(fd) => {
-        setQty("1");
-        setPrice("");
-        formAction(fd);
-      }}
-      className="flex flex-col gap-3"
-    >
+    <form key={round} action={formAction} className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-6">
         <Field label="النوع" htmlFor="ln_type">
           <Select id="ln_type" name="line_type" defaultValue="part">
