@@ -11,7 +11,17 @@ type Line = { line_no: number; debit_minor: number; credit_minor: number; accoun
 const CELL = "border-b border-border px-3 py-1.5";
 
 /** The journal entries behind an expense or fill-up: the current one, and any it replaced. */
-export async function JournalEntryCard({ sourceType, sourceId }: { sourceType: string; sourceId: string }) {
+export async function JournalEntryCard({
+  sourceType,
+  sourceId,
+  subtitle = "يُرحّل تلقائياً عند الاعتماد؛ أي تعديل يعكس القيد ويرحّل قيداً جديداً",
+  empty = "لا يوجد قيد؛ يُرحّل عند الاعتماد.",
+}: {
+  sourceType: string;
+  sourceId: string;
+  subtitle?: string;
+  empty?: string;
+}) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("journal_entries")
@@ -24,9 +34,9 @@ export async function JournalEntryCard({ sourceType, sourceId }: { sourceType: s
 
   return (
     <Card>
-      <CardHeader title="القيد المحاسبي" subtitle="يُرحّل تلقائياً عند الاعتماد؛ أي تعديل يعكس القيد ويرحّل قيداً جديداً" />
+      <CardHeader title="القيد المحاسبي" subtitle={subtitle} />
       {entries.length === 0 ? (
-        <EmptyState>لا يوجد قيد؛ يُرحّل عند الاعتماد.</EmptyState>
+        <EmptyState>{empty}</EmptyState>
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {entries.map((e) => {

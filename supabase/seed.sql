@@ -259,9 +259,10 @@ begin
 
         -- Periodic service every 20,000 km
         if odo >= next_service then
-          insert into public.work_orders (truck_id, workshop_id, kind, status, opened_on, closed_on, odometer,
+          -- Opened, its lines added, then closed with the workshop's invoice (on credit).
+          insert into public.work_orders (truck_id, workshop_id, kind, status, opened_on, odometer,
                                           description, invoice_no)
-          values (t.id, workshop_ids[pg_temp.rint(1, 2)], 'service', 'closed', d, d, odo,
+          values (t.id, workshop_ids[pg_temp.rint(1, 2)], 'service', 'open', d, odo,
                   'صيانة دورية: تغيير زيت وفلاتر', 'INV-' || pg_temp.rint(10000, 99999))
           returning id into wo_id;
           insert into public.work_order_lines (work_order_id, line_type, description, part_number, quantity, unit_price_minor) values
@@ -270,6 +271,7 @@ begin
             (wo_id, 'part', 'فلتر ديزل', 'FLT-DSL', 2, 12000),
             (wo_id, 'part', 'فلتر هواء', 'FLT-AIR', 1, 35000),
             (wo_id, 'labor', 'أجور فني', null, 1, 25000);
+          update public.work_orders set status = 'closed', closed_on = d, payment_method = 'credit' where id = wo_id;
           last_service_odo := odo;
           last_service_on := d;
           next_service := next_service + 20000;
@@ -278,9 +280,9 @@ begin
 
         -- Occasional repair
         if random() < 0.04 then
-          insert into public.work_orders (truck_id, workshop_id, kind, status, opened_on, closed_on, odometer,
+          insert into public.work_orders (truck_id, workshop_id, kind, status, opened_on, odometer,
                                           description, invoice_no)
-          values (t.id, workshop_ids[pg_temp.rint(1, 2)], 'repair', 'closed', d, d + 1, odo,
+          values (t.id, workshop_ids[pg_temp.rint(1, 2)], 'repair', 'open', d, odo,
                   'إصلاح أعطال', 'INV-' || pg_temp.rint(10000, 99999))
           returning id into wo_id;
           case pg_temp.rint(1, 4)
@@ -302,6 +304,7 @@ begin
                 (wo_id, 'part', 'إصلاح تيربو', 1, 900000), (wo_id, 'labor', 'أجور فني', 1, 150000);
               update public.work_orders set description = 'إصلاح التيربو' where id = wo_id;
           end case;
+          update public.work_orders set status = 'closed', closed_on = least(d + 1, today), payment_method = 'credit' where id = wo_id;
           d := d + 2;
         end if;
       end loop;

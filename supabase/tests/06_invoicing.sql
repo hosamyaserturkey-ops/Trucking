@@ -102,7 +102,8 @@ select pg_temp.check(
    from public.invoices i join inv1 on inv1.id = i.id),
   'the subtotal is the loads'' freight in JOD');
 select pg_temp.check(
-  (select i.vat_rate_pct = 16 and i.vat_minor = round(i.subtotal_minor * 0.16) and i.total_minor = i.subtotal_minor + i.vat_minor
+  (select i.vat_rate_pct = 16 and i.total_minor = i.subtotal_minor + i.vat_minor
+          and i.vat_minor = (select sum(round(l.amount_minor * 0.16)) from public.invoice_lines l where l.invoice_id = i.id)
    from public.invoices i join inv1 on inv1.id = i.id),
   'sales tax is 16% and the total adds up');
 select pg_temp.check(

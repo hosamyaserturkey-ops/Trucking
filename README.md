@@ -170,6 +170,77 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - The load's page lists its declarations, with **+ إرفاق بيان** filling in that load.
 - Customs declarations are for the manager, the accountant and the dispatcher; drivers never get a link to them.
 
+## Maintenance and work orders (الصيانة وأوامر العمل)
+
+- **الصيانة (`/maintenance`):** trucks in the workshop now (open orders, oldest first, with days in the workshop), periodic services overdue or due soon, and every order opened or closed in a period, filtered by truck, workshop and status, with Excel export.
+- **Opening an order (`/maintenance/new`):** truck, workshop or parts supplier, kind (periodic service, repair, tires, inspection, other), the day it went in, the odometer and the work to do. The truck shows **في الورشة** on the fleet board while an order is open. A due service on the list opens an order for it in one click.
+- **Lines:** parts (with part number), labour, tires or other, each with quantity and unit price; the total follows. Lines change only while the order is open.
+- **Closing (manager and accountant):** when the workshop's invoice is in, with its date and number and how it is paid:
+
+  | Paid | Debit | Credit |
+  |---|---|---|
+  | on credit (default) | 5102 الصيانة والإصلاح and 5103 الإطارات (tire lines), on the truck | 2101 the workshop, so it shows in ذمم الموردين and is paid from دفعات الموردين |
+  | cash | same | 1101, with the payment voucher number from the shared book |
+  | bank transfer | same | 1102, with the notice number |
+
+  Tick the periodic services done on the order; they are marked done at the order's odometer and closing date, so the next due point counts from there.
+- **A closed order never changes.** Notes, the invoice number and the invoice scan can still be added. To correct one, the manager or accountant reopens it (its entry is reversed), fixes it and closes it again. An open order can be cancelled with a reason, or deleted if it was opened by mistake.
+- **Truck profit counts closed orders only, on the day they closed**, so Truck 360, the fleet board and the reports agree with the ledger.
+- **Workshop invoice scan:** attach the invoice (PDF or photo, up to 10 MB) on the order's page; it is stored with the truck documents in R2 and opens through `/files/work-order/<id>`.
+- **الصيانة الدورية (`/maintenance/schedules`):** every truck's periodic services (every so many km and/or days), the last time done (and on which order), the next due point and what is left. The manager and the dispatcher add, change, pause or delete them.
+- **Who:** the manager, accountant and dispatcher open orders and add lines; only the manager and accountant close or reopen them. Drivers see none of it.
+
+## Truck and customer profit reports (تقارير الربح)
+
+Both reports read the same figures as Truck 360 and the fleet board (closed work orders, approved expenses and fill-ups, overhead shares, depreciation, interest), for this month, this year or any range, with Excel export and A4 printing. Manager and accountant only.
+
+- **ربح الشاحنات (`/reports/trucks`):** per truck: trips, km, revenue, diesel, maintenance, direct expenses, overhead share, depreciation, interest, total costs, net profit, margin, cost per km and profit per km, best first, with a totals line. For more than one month, a fleet chart and each truck's net profit month by month.
+- **ربح الزبائن (`/reports/clients`):** per customer: loads, tons, revenue and share of revenue, direct costs, the trucks' costs shared to them, net profit, margin and profit per load.
+  - **Direct costs:** diesel and expenses entered against one of the customer's loads (e.g. a border toll).
+  - **Shared costs:** every other cost of a truck in a month is shared among that truck's loads of that month, **by revenue** (default), **by number of loads**, or **by km** (falls back to revenue when the loads have no km, as loading-sheet lines don't). Exact to the fils.
+  - **Idle trucks:** a truck's costs in a month it carried nothing are shown on their own line, never charged to a customer. Loads with no customer have their own line too.
+  - **The totals equal the fleet's net profit** in the truck report for the same period, whichever basis is chosen.
+  - Each customer opens their loads (`/reports/clients/<id>`): date, reference, truck, route, cargo, freight, direct costs, share of the truck's costs, profit and margin per load.
+- In the database: `truck_profit_report`, `truck_profit_monthly`, `client_profit_report` and `client_profit_trips` (migration 24), summed in Postgres because the API returns at most 1,000 rows.
+
+## Bank reconciliation (مطابقة كشف البنك)
+
+- **مطابقة البنك (`/bank`):** each bank statement with its period, opening and closing balances, lines, what is still unmatched and the difference. Manager and accountant only.
+- **Entering a statement:**
+  - Pick the bank's **Excel (.xlsx) or CSV** file. It is read in the browser: the header row is found by its names (التاريخ / البيان / المرجع / مدين / دائن / المبلغ / الرصيد, or Date / Description / Reference / Debit / Credit / Amount / Balance, and their usual variants), amounts like `1,250.500`, `(75.25)`, `75.25-` or `40 DR` are understood, Arabic CSV files saved as Windows-1256 are decoded, and a file listed newest first is put in order. Opening and closing balance rows are taken as balances, not movements.
+  - Check the preview, the period (from the dates in the file), the opening balance (from the file or the previous statement's closing) and the bank's printed closing balance: the statement is not saved while the computed closing differs from it.
+  - Or save an empty statement and type its lines. A blank template can be downloaded.
+  - Statements of one account don't overlap; a gap or a different opening balance from the previous statement is pointed out.
+- **Matching (`/bank/<id>`):**
+  - **مطابقة تلقائية** pairs lines one to one with the same amount within 10 days, a line carrying the cheque, notice or voucher number first. Review what it did; any match can be undone.
+  - By hand: tick lines on both sides with the same total (one deposit of several cheques, a payment split in two, or a ledger entry and its later reversal) and **مطابقة المحدد**. Ticking a bank line narrows the ledger side to the same amount.
+  - A bank line the books don't have yet (charges, interest) is **posted from the statement** against an account (5204 مصاريف وعمولات بنكية, new; or 4102 for interest, or any other, optionally on a truck) and matched in one step. Customer, supplier, advance and cheque movements are entered in their own screens first, then matched.
+- **The reconciliation, as of the statement's last day:** the bank's balance, plus deposits in the books not yet in the bank, minus payments and cheques not yet presented, against the book balance plus or minus bank movements not yet in the books. The difference does not depend on matching: if it isn't zero, the opening balance or a missing movement is the cause.
+  - Ledger lines before the first statement that were never matched are taken as cleared before it; the opening entry is a balance, not a movement; an entry reversed on its own day cancels out.
+- **Closing:** when the difference is zero and every bank line is matched, the statement is closed. It then never changes, and an entry matched in it cannot be reversed (e.g. by editing a bank receipt) until it is reopened. While a statement is open, reversing a matched entry undoes the match so its line shows up again.
+- **Printing:** an A4 reconciliation statement with both sides, the outstanding items and signature lines (`/print/bank/<id>`).
+
+## JoFotara e-invoicing (الفوترة الإلكترونية — جوفوترة)
+
+Customer invoices are sent to the national e-invoicing system of the Income and Sales Tax Department, and the QR code it returns is printed on the tax invoice. Manager and accountant only.
+
+- **Sending (`/invoices/<id>` → «إرسال الفاتورة إلى جوفوترة»):** the invoice becomes a UBL 2.1 file (a general sales tax invoice on account, `InvoiceTypeCode name="022"`, 388), base64-encoded and posted to `https://backend.jofotara.gov.jo/core/invoices/` with the `Client-Id` and `Secret-Key` headers.
+  - **Accepted** (`SUBMITTED`, or `ALREADY_SUBMITTED` for a resend): JoFotara's number, its UUID and the QR code are kept for good, and the QR prints on the A4 tax invoice.
+  - **Rejected:** its reasons show on the invoice; fix the data and send again. The same document (same UUID and invoice counter) is reused for every attempt.
+  - **Before sending,** the page lists anything missing: the company's tax number and income source sequence, the customer's tax number.
+  - **«ملف XML»** downloads the file to check it, before or after sending.
+- **What goes in the file:** the invoice number, its own UUID, the invoice counter (ICV, one per document), the seller (tax number, name, income source sequence), the customer (tax number as `TN`, name, governorate code from the city, phone), and one line per load (route, cargo, references) with its tax. Amounts are JOD with 3 decimals; an exempt customer's lines are category `Z` at 0%.
+- **Sales tax is now worked out line by line** (each load's tax rounded to the fils, then summed), because JoFotara checks that the invoice's tax is the sum of its lines' tax and that the totals are the sum of the lines' totals. Invoices issued before keep their totals; their tax is spread over the lines exactly when they are sent.
+- **Cancelling a sent invoice** leaves a **credit note (فاتورة إرجاع, 381)** to send, numbered `R-<invoice number>`, referring to the original invoice and carrying the cancellation reason. An invoice cancelled before it was sent needs nothing.
+- **The invoices list** shows each invoice's JoFotara status (مقبولة / لم تُرسل / مرفوضة / إرجاع لم يُرسل).
+- **Setting it up:**
+  1. On the JoFotara portal, register the company's activity and take its **income source sequence (تسلسل مصدر الدخل)**; enter it under **بيانات الشركة** with the company's tax number.
+  2. On the portal, link a system (ربط الأنظمة) and take the **Client ID** and **Secret Key**.
+  3. Set them where the app runs as **secrets**, never in the database or with a `NEXT_PUBLIC_` prefix: `JOFOTARA_CLIENT_ID` and `JOFOTARA_SECRET_KEY` (Cloudflare: Workers & Pages → trucking → Settings → Variables and Secrets, type Secret). `JOFOTARA_URL` changes the address only if ISTD gives another one.
+  4. Every customer that is invoiced needs its tax number under العملاء.
+  5. **Every accepted invoice is real and reported to the tax department.** There is no test mode: send a first real invoice, check it on the portal, then carry on.
+- Built from ISTD's technical guide as published; the file and its rules (`src/lib/jofotara-xml.ts`) are unit-tested, but sending has not been tried against the live system from here. If JoFotara rejects the first invoice, its reason shows on the invoice page.
+
 ## Accuracy rules (enforced in the database)
 
 - **Every cost has a truck, or is marked overhead.** Overhead is allocated to trucks by rule (`equal` or `by_km` in `company_settings`), exactly to the fils.
@@ -273,7 +344,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
    - Non-production branch deploy command: `npx opennextjs-cloudflare upload`
    - Root directory: leave it as `/`.
 2. **Build** → **Variables and secrets** (used while building): add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Next.js puts these two public values into the pages at build time.
-3. **Variables and Secrets** (used while running): add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`, each as type **Secret**.
+3. **Variables and Secrets** (used while running): add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET`, each as type **Secret**; and, when the company is ready to send e-invoices, `JOFOTARA_CLIENT_ID` and `JOFOTARA_SECRET_KEY` (see JoFotara above).
 4. **Domains & Routes:** note the `workers.dev` address and add it to the R2 bucket's CORS rule (step 3 above), so phones can upload receipts from it.
 5. **Retry the latest build**, or push a commit.
 
@@ -316,6 +387,10 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   20. supplier payments and issued cheques posted as journal entries; discount received account (4104); supplier balances
   21. driving licence scan on the driver
   22. opening balances: opening date, balances per account/customer/supplier posted as one entry, opening driver advances and cheques
+  23. maintenance work orders: open → closed (manager or accountant, with the workshop invoice and payment) → posted; reopen and cancel; services marked done; truck profit counts closed orders
+  24. truck and customer profit reports: per truck, per month, per customer (direct costs plus the truck-month's other costs shared by revenue, loads or km; idle trucks apart)
+  25. bank reconciliation: bank statements and lines, matches with ledger lines on 1102, outstanding items as of a day, posting bank lines, closing and reopening; bank charges account (5204)
+  26. JoFotara: e-invoice documents (invoice and credit note, UUID, invoice counter, JoFotara's answer and QR), sales tax per invoice line, income source sequence setting
 - **Demo data:** run these in order:
   1. `supabase/seed.sql`: 15 trucks, about 6 months, all names fictional;
   2. `supabase/seed_phase2.sql`: advances, past settlements, expenses waiting for approval;
@@ -323,7 +398,7 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
   4. `supabase/seed_invoices.sql`: monthly invoices with bank, cheque and bounced-cheque receipts (also loaded on the live demo).
   5. `supabase/seed_payments.sql`: monthly payments to suppliers by transfer, a paid cheque with a discount, and cheques not paid yet.
 - **Before go-live:**
-  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries) from 1.
+  - Run `supabase/reset_demo.sql`. It keeps the chart of accounts, categories and settings, and restarts the numbering (trips, invoices, receipts, journal entries, work orders, bank statements, the JoFotara invoice counter) from 1.
   - Run `truncate audit.log;`.
   - Empty the R2 bucket `trucking-files` (demo receipt photos), and once R2 is confirmed, remove the old Supabase Storage buckets.
   - Delete the demo users in Supabase Auth.
@@ -337,9 +412,5 @@ The app runs as a Cloudflare Worker named `trucking`. It is built with `@opennex
 
 ## Next phases
 
-- **4:** work orders, documents and alerts (WhatsApp/SMS).
-- **5:** JoFotara (Jordan e-invoicing).
-- **6:** manual journal entries, period closing, bank reconciliation.
-- **7:** payroll.
-- **8:** reports and exports.
-- **9:** hardening.
+- Done since: work orders, JoFotara, bank reconciliation, truck and customer profit reports.
+- **Next:** tire stock and fitting from work orders, alerts by WhatsApp/SMS, manual journal entries and period closing, payroll, hardening.

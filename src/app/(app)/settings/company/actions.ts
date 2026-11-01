@@ -38,6 +38,8 @@ export async function saveCompany(_prev: CompanySaveState, formData: FormData): 
   const portalRaw = String(formData.get("customs_portal_url") ?? "").trim();
   const customs_portal_url = portalRaw ? parsePortalUrl(portalRaw) : null;
   if (portalRaw && !customs_portal_url) return { error: "رابط نظام الجمارك يجب أن يبدأ بـ https://" };
+  const incomeSource = get("jofotara_income_source").replace(/\s+/g, "");
+  if (incomeSource && !/^\d{1,20}$/.test(incomeSource)) return { error: "تسلسل مصدر الدخل أرقام فقط" };
   const supabase = await createClient();
   const { error } = await supabase
     .from("company_settings")
@@ -48,6 +50,7 @@ export async function saveCompany(_prev: CompanySaveState, formData: FormData): 
       phone: v.phone || null,
       vat_rate_pct: Number(v.vat_rate_pct),
       customs_portal_url,
+      jofotara_income_source: incomeSource || null,
     })
     .eq("id", true);
   if (error) return { error: describeDbError(error) };

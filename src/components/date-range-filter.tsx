@@ -6,10 +6,16 @@ import { useState } from "react";
 import { inclusiveEnd, resolveRange } from "@/lib/date-range";
 import { buttonClass } from "@/components/ui/button";
 
-export function DateRangeFilter() {
+/** `keep` names other query parameters (e.g. a report's basis) to carry across range changes. */
+export function DateRangeFilter({ keep = [] }: { keep?: string[] } = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const params = useSearchParams();
+  const extra = keep
+    .map((k) => [k, params.get(k)] as const)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`)
+    .join("");
   const range = resolveRange({
     range: params.get("range") ?? undefined,
     from: params.get("from") ?? undefined,
@@ -17,7 +23,7 @@ export function DateRangeFilter() {
   });
   const chip = (key: "month" | "year", label: string) => (
     <Link
-      href={`${pathname}?range=${key}`}
+      href={`${pathname}?range=${key}${extra}`}
       aria-current={range.key === key ? "true" : undefined}
       className={buttonClass(range.key === key ? "primary" : "secondary", "py-1.5")}
     >
@@ -35,7 +41,7 @@ export function DateRangeFilter() {
         initialFrom={range.from}
         initialTo={inclusiveEnd(range)}
         active={range.key === "custom"}
-        onApply={(from, to) => router.push(`${pathname}?range=custom&from=${from}&to=${to}`)}
+        onApply={(from, to) => router.push(`${pathname}?range=custom&from=${from}&to=${to}${extra}`)}
       />
     </div>
   );

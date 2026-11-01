@@ -6,6 +6,11 @@
 begin;
 
 truncate
+  public.einvoices,
+  public.bank_match_lines,
+  public.bank_statement_lines,
+  public.bank_matches,
+  public.bank_statements,
   public.opening_balances,
   public.customs_documents,
   public.supplier_payments,

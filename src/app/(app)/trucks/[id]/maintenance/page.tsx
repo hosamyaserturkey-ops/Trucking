@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { truckPage, type TruckPageProps } from "@/lib/truck";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate, formatDecimal, formatInt } from "@/lib/format";
-import { SERVICE_STATUS, TIRE_POSITIONS, WORK_ORDER_KIND, WORK_ORDER_STATUS } from "@/lib/labels";
+import { SERVICE_STATUS, TIRE_POSITIONS, WORK_ORDER_KIND, WORK_ORDER_LINE_TYPE, WORK_ORDER_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
@@ -50,12 +51,20 @@ export default async function TruckMaintenancePage(props: TruckPageProps) {
   const installs = (tiresRes.data ?? []) as Installation[];
   const current = new Map(installs.filter((i) => !i.removed_on).map((i) => [i.position_code, i]));
   const history = installs.filter((i) => i.removed_on);
-  const total = sumMinor(orders.filter((o) => o.status !== "cancelled").map((o) => o.total_base_minor));
+  const total = sumMinor(orders.filter((o) => o.status === "closed").map((o) => o.total_base_minor));
 
   return (
     <>
       <Card>
-        <CardHeader title="الصيانة الدورية" subtitle="حسب الكيلومترات و/أو التاريخ" />
+        <CardHeader
+          title="الصيانة الدورية"
+          subtitle="حسب الكيلومترات و/أو التاريخ"
+          action={
+            <Link href={`/maintenance/schedules?truck=${id}`} className="text-xs text-primary hover:underline">
+              إدارة الجداول
+            </Link>
+          }
+        />
         {services.length === 0 ? (
           <EmptyState>لا توجد جداول صيانة لهذه الشاحنة.</EmptyState>
         ) : (
@@ -99,6 +108,11 @@ export default async function TruckMaintenancePage(props: TruckPageProps) {
         <CardHeader
           title="أوامر الصيانة وفواتير الورش"
           subtitle={`${formatInt(orders.length)} أمر · ${formatMoney(total)} · ${range.label} (والمفتوحة دائماً)`}
+          action={
+            <Link href={`/maintenance/new?truck=${id}`} className="text-xs text-primary hover:underline">
+              + أمر صيانة جديد
+            </Link>
+          }
         />
         {orders.length === 0 ? (
           <EmptyState>لا توجد أوامر صيانة في هذه الفترة.</EmptyState>
@@ -112,7 +126,9 @@ export default async function TruckMaintenancePage(props: TruckPageProps) {
                   <details className="group">
                     <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
                       <span className="min-w-0">
-                        <span className="font-medium">{o.description}</span>
+                        <Link href={`/maintenance/${o.id}`} className="font-medium hover:underline">
+                          {o.description}
+                        </Link>
                         <span className="block text-xs text-muted">
                           <span className="num">#{o.wo_no}</span> · {WORK_ORDER_KIND[o.kind]} · {workshop ?? "—"} ·{" "}
                           <span className="num">{formatDate(o.opened_on)}</span>
@@ -151,7 +167,7 @@ export default async function TruckMaintenancePage(props: TruckPageProps) {
                               <Td>
                                 {l.description}
                                 <span className="ms-2 text-xs text-muted">
-                                  {l.line_type === "labor" ? "أجور" : l.line_type === "part" ? "قطع" : ""}
+                                  {WORK_ORDER_LINE_TYPE[l.line_type] ?? ""}
                                 </span>
                               </Td>
                               <Td className="num text-end">{formatDecimal(l.quantity, 0)}</Td>

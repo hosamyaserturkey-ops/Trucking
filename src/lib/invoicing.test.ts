@@ -9,6 +9,8 @@ describe("invoiceTotals / draftPeriod", () => {
   it("adds tax on the subtotal, rounded to the fils", () => {
     expect(invoiceTotals([210_000, 185_500], 16)).toEqual({ subtotal: 395_500, vat: 63_280, total: 458_780 });
     expect(invoiceTotals([100_001], 16).vat).toBe(16_000);
+    // Line by line: 16.000 + 16.000, not 16% of 200.006 (32.001).
+    expect(invoiceTotals([100_003, 100_003], 16)).toEqual({ subtotal: 200_006, vat: 32_000, total: 232_006 });
     expect(invoiceTotals([100_000], 0)).toEqual({ subtotal: 100_000, vat: 0, total: 100_000 });
   });
   it("covers last month unless a period is given", () => {

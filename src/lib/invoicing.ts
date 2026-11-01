@@ -13,10 +13,18 @@ export const RECEIPT_METHODS = ["cash", "bank", "cheque", "discount"] as const;
 export type ReceiptMethod = (typeof RECEIPT_METHODS)[number];
 export const CHEQUE_STATUSES = ["in_hand", "deposited", "cleared", "bounced"] as const;
 
-/** Subtotal, tax and total the way create_invoice() computes them. */
+/** One line's sales tax, rounded to the fils as create_invoice() does (line amounts are positive). */
+export function lineVat(amountMinor: number, vatRatePct: number): number {
+  return Math.round((amountMinor * vatRatePct) / 100);
+}
+
+/**
+ * Subtotal, tax and total the way create_invoice() computes them: the tax is
+ * worked out line by line and summed, as JoFotara checks it.
+ */
 export function invoiceTotals(amounts: number[], vatRatePct: number) {
   const subtotal = amounts.reduce((s, a) => s + a, 0);
-  const vat = Math.round((subtotal * vatRatePct) / 100);
+  const vat = amounts.reduce((s, a) => s + lineVat(a, vatRatePct), 0);
   return { subtotal, vat, total: subtotal + vat };
 }
 

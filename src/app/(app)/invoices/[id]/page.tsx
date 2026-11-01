@@ -16,6 +16,7 @@ import { Card, CardBody, CardHeader, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { CancelInvoiceForm } from "@/components/invoice-forms";
 import { JournalEntryCard } from "@/components/journal-entry-card";
+import { EinvoiceCard } from "@/components/einvoice-card";
 
 export const metadata: Metadata = { title: "فاتورة" };
 
@@ -165,6 +166,8 @@ export default async function InvoicePage({
             <p className="mt-3 text-sm text-muted">{amountInWords(inv.total_minor)}</p>
           </CardBody>
         </Card>
+
+        <EinvoiceCard invoiceId={inv.id} invoiceStatus={inv.status} />
 
         {inv.status === "issued" ? (
           <Card>
