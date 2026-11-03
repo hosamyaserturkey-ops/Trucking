@@ -46,12 +46,15 @@ const MAX_LINES = 1000;
 /**
  * An account statement for a period: opening balance, then every line with
  * its documents and the running balance. `key` is an account id (a parent
- * account covers the accounts under it) or "expenses" for all expense accounts.
+ * account covers the accounts under it, unless `exact`) or "expenses" for all
+ * expense accounts.
  */
-export async function loadStatement(key: string, f: StatementFilter): Promise<Statement | null> {
+export async function loadStatement(key: string, f: StatementFilter, opts: { exact?: boolean } = {}): Promise<Statement | null> {
   const supabase = await createClient();
   const { data: accounts } = await supabase.from("accounts").select("id, code, name_ar, parent_id, is_postable, type");
-  const ids = statementAccounts(key, accounts ?? []);
+  const ids = opts.exact
+    ? (accounts ?? []).filter((a) => a.id === key && a.is_postable).map((a) => a.id)
+    : statementAccounts(key, accounts ?? []);
   if (ids.length === 0) return null;
   const root = accounts?.find((a) => a.id === key);
   const title = key === "expenses" ? "كل حسابات المصاريف" : `${root?.code} ${root?.name_ar}`;

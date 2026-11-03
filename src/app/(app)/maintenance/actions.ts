@@ -7,6 +7,7 @@ import { FINANCE_ROLES, STAFF_ROLES, TRIP_WRITERS } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { afterFileSaved, attachFile, removeFile } from "@/lib/file-access";
+import { bankAccountFor } from "@/lib/bank";
 import { describeDbError } from "@/lib/master-data-parse";
 import {
   parseCancelReason,
@@ -122,6 +123,12 @@ export async function closeWorkOrder(id: string, _prev: WorkOrderFormState, form
   });
   if (!parsed.ok) return { error: parsed.error };
   const v = parsed.values;
+  // Paid by bank transfer: from the bank the form names, set while the order is still open.
+  const { error: bankError } = await supabase
+    .from("work_orders")
+    .update({ bank_account_id: bankAccountFor(v.payment_method, fromForm(formData)("bank_account_id")) })
+    .eq("id", id);
+  if (bankError) return { error: dbMessage(bankError) };
   const { error } = await supabase.rpc("close_work_order", {
     p_work_order_id: id,
     p_closed_on: v.closed_on,

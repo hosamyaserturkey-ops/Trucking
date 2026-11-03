@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openLedger, parseAdvance, parseApproval, parseRejection, settlementPreview, type LedgerInput } from "./advances";
+import { openLedger, parseAdvance, parseApproval, parseRejection, settlementPreview, type LedgerInput, parseLoadPay } from "./advances";
 
 const form = (data: Record<string, string>) => (name: string) => data[name] ?? null;
 const DRIVER = "11111111-1111-4111-8111-111111111111";
@@ -81,5 +81,26 @@ describe("openLedger and settlementPreview", () => {
     expect(settlementPreview(items, "2026-10-10")).toEqual({ count: 3, advances: 170_000, expenses: 12_000, difference: 158_000 });
     expect(settlementPreview(items, "2026-10-26").difference).toBe(-2_000);
     expect(settlementPreview(items, "2026-09-30").count).toBe(0);
+  });
+});
+
+describe("parseLoadPay", () => {
+  const form = (data: Record<string, string>) => (name: string) => data[name] ?? null;
+
+  it("reads the pay in dinars, Arabic digits too", () => {
+    expect(parseLoadPay(form({ amount: "35" }))).toEqual({ ok: true, values: { amount_minor: 35_000, notes: null } });
+    expect(parseLoadPay(form({ amount: "٤٢٫٥", notes: " مع تنزيل " }))).toEqual({ ok: true, values: { amount_minor: 42_500, notes: "مع تنزيل" } });
+  });
+
+  it("clears the price when empty or 0", () => {
+    expect(parseLoadPay(form({ amount: "" }))).toMatchObject({ ok: true, values: { amount_minor: 0 } });
+    expect(parseLoadPay(form({ amount: "0" }))).toMatchObject({ ok: true, values: { amount_minor: 0 } });
+  });
+
+  it("refuses what is not an amount", () => {
+    expect(parseLoadPay(form({ amount: "-5" }))).toMatchObject({ ok: false });
+    expect(parseLoadPay(form({ amount: "abc" }))).toMatchObject({ ok: false });
+    expect(parseLoadPay(form({ amount: "1.2345" }))).toMatchObject({ ok: false });
+    expect(parseLoadPay(form({ amount: "200000" }))).toMatchObject({ ok: false });
   });
 });

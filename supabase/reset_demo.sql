@@ -7,6 +7,7 @@ begin;
 
 truncate
   public.einvoices,
+  public.bank_movements,
   public.bank_match_lines,
   public.bank_statement_lines,
   public.bank_matches,

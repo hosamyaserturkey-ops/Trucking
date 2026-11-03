@@ -33,6 +33,7 @@ import {
   Wallet,
   Wrench,
   type LucideIcon,
+  Vault,
 } from "lucide-react";
 import type { NavItem } from "@/lib/roles";
 
@@ -66,6 +67,7 @@ const ICONS: Record<string, LucideIcon> = {
   wrench: Wrench,
   chart: ChartColumn,
   bankcheck: FileCheck,
+  vault: Vault,
 };
 
 function isActive(pathname: string, href: string) {

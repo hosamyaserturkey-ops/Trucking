@@ -79,6 +79,25 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - The sheet counts both, with their freight. The colours and the words show on the sheet, its print and the trips list (planned, running and cancelled trips and empty returns stay uncoloured), and the words go to the Excel export. On the trips list the profit is no longer coloured by its sign.
 - **Who can do what:** the manager and the dispatcher add, edit and delete lines; the accountant views.
 
+## Driver pay per load (أجرة السائق للنقلة)
+
+- **Each finished load is priced for its driver by hand:** the work varies too much for a fixed rate. The manager or the accountant types the pay on the driver's page (**تسعير النقلات للسائق**, under العهد): his loads since his last settlement with no pay yet, and the priced ones not settled yet, whose price can still change. Leaving the amount empty clears it. **إظهار النقلات الأقدم** lists every load never priced.
+- **His account moves at once.** The pay is an approved expense on the load, of the kind أجور ومكافآت السائقين, charged to the driver's account:
+
+  | Debit | Credit |
+  |---|---|
+  | 5106 أجور ومكافآت السائقين, on the truck | 1105 عهد السائقين (the driver) |
+
+  So his balance goes down by it (or what he is owed goes up), and it is settled with his advances and the expenses he paid. The settlement's difference is paid to him or returned by him in cash, as before. It also counts as a cost of the load, in Truck 360 and in the profit reports.
+- **The pay follows its load.** Its truck, driver, date (the load's end date) and description (`أجرة نقلة ARB-0041`) always come from the load, and only the amount and a note are typed. If the load's driver, truck or date changes, the pay moves with it. If the load is deleted, its pay goes too.
+- **Settled pay is locked.** Its amount can't change, and neither can the load's driver, truck, date or status, and the load can't be deleted.
+- **Where it shows:**
+  - **العهد:** each driver's open load pay and how many of his loads wait to be priced.
+  - **The driver's page:** pay lines in his open movements marked **أجرة نقلة**, and a warning while loads since his last settlement have no pay.
+  - **The driver's phone:** his pay per load under **أجور نقلاتي**, not in his expenses.
+  - **المصاريف:** pay rows link to the driver's pricing instead of the expense form.
+- **Who:** the manager and the accountant price; the database refuses anyone else (`set_load_driver_pay`, migration 27).
+
 ## Journal entries and account statements (القيود وكشف الحساب)
 
 - **Every expense, diesel fill-up, driver advance and settlement is posted automatically** as a journal entry once it counts (approved):
@@ -113,7 +132,11 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - Posting: Dr cash, bank, cheques under collection (1104) or discount allowed (4103); Cr the customer.
   - Cheques waiting to be collected are listed by due date. Mark one deposited, cleared (moves to the bank) or bounced (back on the customer's account).
 - **ذمم العملاء (`/receivables`):** each customer's balance, the overdue part (oldest invoices paid first), cheques not collected yet and loads not invoiced yet.
-- **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form.
+- **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form. Below the movements:
+  - **نقلات لم تتم المطالبة بها:** every finished load not invoiced yet, whatever its date, with its reference, truck, route, the customer's document and freight, and the count and total.
+  - **الفواتير ونقلاتها:** the period's invoices, each with its loads (by reference) and how far it is paid: مدفوعة, مدفوعة جزئياً or غير مدفوعة, with what is still owed. Payments settle the oldest invoices first (the same rule as the overdue amount), and a cheque in hand counts as paid. The cards above count paid, partly paid and unpaid invoices.
+  - **النقلات حسب الشهر:** the period's loads per month: claimed (invoiced) and not claimed, with their amounts.
+- **البحث برقم الإشارة (`/receivables/ref`):** type a load's reference (`ARB-0041`; `arb 41`, `ARB0041` and Arabic digits work too) or the customer's document number. One match opens the customer's statement from the start of the load's year, with a card for the load (its claim status, invoice, payment, and links to that day's loading sheet and the load) and the load marked in the lists; several matches are listed. The search box is on ذمم العملاء and on every statement, and a load's reference on the loading sheet, the trips list and an invoice leads there (manager and accountant).
 - Invoices, receipts and customer accounts are for the manager and the accountant; company details are for the manager.
 
 ## Supplier payments (دفعات الموردين وذممهم)
@@ -223,6 +246,41 @@ Both reports read the same figures as Truck 360 and the fleet board (closed work
   - Ledger lines before the first statement that were never matched are taken as cleared before it; the opening entry is a balance, not a movement; an entry reversed on its own day cancels out.
 - **Closing:** when the difference is zero and every bank line is matched, the statement is closed. It then never changes, and an entry matched in it cannot be reversed (e.g. by editing a bank receipt) until it is reopened. While a statement is open, reversing a matched entry undoes the match so its line shows up again.
 - **Printing:** an A4 reconciliation statement with both sides, the outstanding items and signature lines (`/print/bank/<id>`).
+
+## Bank accounts and their statements (الحسابات البنكية)
+
+- **Several bank accounts:**
+  - 1102 is the main account. Each other one is a sub-account numbered 1102NN, added on **الحسابات البنكية (`/banks`)** with its name and account number or IBAN; both can be changed there.
+  - Every bank account has its own statement, reconciliation (**مطابقة البنك**) and opening balance (**الأرصدة الافتتاحية**).
+  - The statement of 1102 under **كشف الحسابات** covers them all.
+- **Which bank a document uses:** with more than one account, each form that pays through a bank asks which account:
+  - an expense paid by transfer or cheque;
+  - diesel paid by card;
+  - an advance by transfer;
+  - a receipt: the account a transfer came into, or a cheque is deposited and collected in;
+  - a supplier payment: the account a transfer left, or a cheque is drawn on;
+  - closing a work order paid by transfer.
+
+  A document that names no bank, including everything entered before, uses 1102. Changing the bank re-posts the document.
+- **The list (`/banks`):** each account's balance in the books, customers' cheques still to be collected into it, our cheques it hasn't paid yet, the balance once they clear, and the last movement.
+- **كشف حساب البنك (`/banks/<account>`):**
+  - The opening balance, then every movement: date, entry, what it is (with a link to its document), its documents (voucher, notice, reference, cheque, receipt, payment), money in and money out, and the running balance.
+  - The cheques still on the way in both directions.
+  - Print (A4) and Excel export.
+- **Other movements on the account:** the ones no other screen makes, entered on the account's statement and posted at once:
+
+  | Kind | Into the bank | Out of the bank |
+  |---|---|---|
+  | Cash | from the cash box (1101) | to the cash box |
+  | Transfer | from another bank account | to another bank account |
+  | The owner | from the owner (3301 جاري المالك) | to the owner |
+  | Charges / interest | interest (4102) | bank charges (5204), optionally on a truck |
+  | Other | from any account you choose | to any account you choose |
+
+  - Customers, suppliers, advances and cheques are refused here: they have their own screens.
+  - Money between two banks is always a transfer.
+  - A movement entered by mistake is deleted from the statement, and its entry is reversed.
+  - Manager and accountant only (`bank_movements`, migration 28).
 
 ## JoFotara e-invoicing (الفوترة الإلكترونية — جوفوترة)
 

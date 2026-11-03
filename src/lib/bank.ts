@@ -394,3 +394,91 @@ export function reconciliationLines(r: {
   const adjustedBook = r.book_balance_minor + r.unrecorded_in_minor - r.unrecorded_out_minor;
   return { adjustedBank, adjustedBook, difference: adjustedBank - adjustedBook };
 }
+
+const BANK_METHODS = new Set(["bank", "card", "check", "cheque"]);
+const BANK_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The bank a document names, kept only when it is paid through a bank (a
+ * transfer, a card, a cheque). Empty means the main bank account (1102); the
+ * database checks the id is a bank account.
+ */
+export function bankAccountFor(method: string | null | undefined, raw: string | null | undefined): string | null {
+  if (!method || !BANK_METHODS.has(method)) return null;
+  const v = (raw ?? "").trim();
+  return BANK_ID.test(v) ? v : null;
+}
+
+/**
+ * The kinds of other bank movements, as the form offers them: each fixes the
+ * direction and, where it can, the other account (by its code).
+ */
+export const BANK_MOVEMENT_TYPES = {
+  cash_in: { label: "إيداع نقدي من الصندوق", kind: "cash", direction: "in", counter: "1101" },
+  cash_out: { label: "سحب نقدي إلى الصندوق", kind: "cash", direction: "out", counter: "1101" },
+  transfer_out: { label: "تحويل إلى حساب بنكي آخر", kind: "transfer", direction: "out", counter: null },
+  transfer_in: { label: "تحويل من حساب بنكي آخر", kind: "transfer", direction: "in", counter: null },
+  owner_in: { label: "إيداع من المالك", kind: "owner", direction: "in", counter: "3301" },
+  owner_out: { label: "سحب للمالك", kind: "owner", direction: "out", counter: "3301" },
+  charges: { label: "عمولات ومصاريف بنكية", kind: "charges", direction: "out", counter: "5204" },
+  interest: { label: "فوائد بنكية دائنة", kind: "interest", direction: "in", counter: "4102" },
+  other_in: { label: "إيداع آخر (اختر الحساب)", kind: "other", direction: "in", counter: null },
+  other_out: { label: "سحب آخر (اختر الحساب)", kind: "other", direction: "out", counter: null },
+} as const;
+
+export type BankMovementType = keyof typeof BANK_MOVEMENT_TYPES;
+
+export type BankMovementValues = {
+  type: BankMovementType;
+  kind: "cash" | "transfer" | "owner" | "charges" | "interest" | "other";
+  direction: "in" | "out";
+  moved_on: string;
+  amount_minor: number;
+  /** Set when the type fixes the other account; otherwise counter_account_id is. */
+  counter_code: string | null;
+  counter_account_id: string | null;
+  truck_id: string | null;
+  reference_no: string | null;
+  description: string | null;
+};
+
+/** A movement on a bank account that no other document makes. Messages are in Arabic for the user. */
+export function parseBankMovement(get: (name: string) => string | null, opts: { today: string }):
+  | { ok: true; values: BankMovementValues }
+  | { ok: false; error: string } {
+  const text = (name: string) => (get(name) ?? "").trim();
+  const type = text("type") as BankMovementType;
+  const t = BANK_MOVEMENT_TYPES[type];
+  if (!t) return { ok: false, error: "اختر نوع الحركة" };
+  const moved_on = text("moved_on") || opts.today;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(moved_on)) return { ok: false, error: "التاريخ غير صحيح" };
+  if (moved_on > opts.today) return { ok: false, error: "لا يمكن تسجيل حركة بتاريخ لاحق" };
+  const amount = parseMoney(text("amount"), "JOD");
+  if (amount === null || amount <= 0n) return { ok: false, error: "أدخل المبلغ" };
+  let counter_account_id: string | null = null;
+  if (!t.counter) {
+    counter_account_id = text("counter_account_id");
+    if (!BANK_ID.test(counter_account_id)) return { ok: false, error: t.kind === "transfer" ? "اختر الحساب البنكي الآخر" : "اختر الحساب" };
+  }
+  const truck = text("truck_id");
+  if (truck && !BANK_ID.test(truck)) return { ok: false, error: "الشاحنة غير صحيحة" };
+  const reference_no = toLatinDigits(text("reference_no")) || null;
+  if (reference_no && reference_no.length > 60) return { ok: false, error: "رقم الإشعار طويل جداً" };
+  const description = text("description") || null;
+  if (description && description.length > 300) return { ok: false, error: "البيان طويل جداً" };
+  return {
+    ok: true,
+    values: {
+      type,
+      kind: t.kind,
+      direction: t.direction,
+      moved_on,
+      amount_minor: Number(amount),
+      counter_code: t.counter,
+      counter_account_id,
+      truck_id: truck || null,
+      reference_no,
+      description,
+    },
+  };
+}

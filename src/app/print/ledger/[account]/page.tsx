@@ -12,7 +12,7 @@ import { Amount, Balance } from "@/components/ledger-bits";
 export const metadata: Metadata = { title: "كشف حساب" };
 
 type Params = Promise<{ account: string }>;
-type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string; client?: string }>;
+type SearchParams = Promise<{ from?: string; to?: string; truck?: string; supplier?: string; driver?: string; client?: string; exact?: string }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CELL = "border border-border px-2 py-1";
@@ -22,10 +22,12 @@ export default async function StatementPrintPage({ params, searchParams }: { par
   const profile = await requireRole(...FINANCE_ROLES);
   const { account } = await params;
   if (account !== "expenses" && !UUID.test(account)) notFound();
-  const f = statementFilter(await searchParams);
+  const sp = await searchParams;
+  const f = statementFilter(sp);
   const supabase = await createClient();
   const [st, settingsRes, truckRes, supplierRes, driverRes] = await Promise.all([
-    loadStatement(account, f),
+    // ?exact=1: this account only, without the accounts under it (a bank's own statement).
+    loadStatement(account, f, { exact: sp.exact === "1" }),
     supabase.from("company_settings").select("company_name").maybeSingle(),
     f.truck ? supabase.from("trucks").select("code").eq("id", f.truck).maybeSingle() : Promise.resolve({ data: null }),
     f.supplier ? supabase.from("suppliers").select("name").eq("id", f.supplier).maybeSingle() : Promise.resolve({ data: null }),

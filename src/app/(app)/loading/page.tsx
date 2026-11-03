@@ -19,6 +19,7 @@ import { ExportButton } from "@/components/export-button";
 import { LoadForm } from "@/components/load-form";
 import { DeleteLoadButton } from "@/components/delete-load-button";
 import { CLAIM_LABEL, CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
+import { refHref } from "@/components/ref-search";
 
 export const metadata: Metadata = { title: "كشف التحميل اليومي" };
 
@@ -201,7 +202,14 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                 {rows.map((r) => (
                   <Tr key={r.id} tone={r.claim ? CLAIM_TONE[r.claim] : undefined}>
                     <Td className="num whitespace-nowrap font-medium">
-                      <span dir="ltr">{r.ref ?? "—"}</span>
+                      {finance && r.ref ? (
+                        // The reference leads to the customer's statement, opened at this load.
+                        <Link href={refHref(r.ref)} className="hover:underline" dir="ltr" title="كشف حساب الزبون عند هذه النقلة">
+                          {r.ref}
+                        </Link>
+                      ) : (
+                        <span dir="ltr">{r.ref ?? "—"}</span>
+                      )}
                     </Td>
                     {oneDay ? null : <Td className="num whitespace-nowrap">{formatDate(r.date)}</Td>}
                     <Td className="num whitespace-nowrap">{r.truckCode}</Td>

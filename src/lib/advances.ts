@@ -109,3 +109,18 @@ export function settlementPreview(items: LedgerInput[], onDate: string) {
   const expenses = included.filter((i) => i.kind === "expense").reduce((s, i) => s + i.base_minor, 0);
   return { count: included.length, advances, expenses, difference: advances - expenses };
 }
+
+/**
+ * The driver's pay for one load, typed by hand in dinars. Empty or 0 clears
+ * the price (the load goes back to waiting to be priced).
+ */
+export function parseLoadPay(get: Get): Result<{ amount_minor: number; notes: string | null }> {
+  const raw = (get("amount") ?? "").trim();
+  const notes = (get("notes") ?? "").trim() || null;
+  if (notes && notes.length > 200) return { ok: false, error: "الملاحظة طويلة جداً" };
+  if (raw === "") return { ok: true, values: { amount_minor: 0, notes } };
+  const amount = parseMoney(raw, "JOD");
+  if (amount === null || amount < 0n) return { ok: false, error: "المبلغ غير صحيح" };
+  if (amount > 100_000_000n) return { ok: false, error: "المبلغ كبير جداً" };
+  return { ok: true, values: { amount_minor: Number(amount), notes } };
+}

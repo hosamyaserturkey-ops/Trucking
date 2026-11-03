@@ -6,6 +6,7 @@ import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { parseChequeStatus, parseReceipt } from "@/lib/invoicing";
+import { bankAccountFor } from "@/lib/bank";
 import { describeDbError } from "@/lib/master-data-parse";
 
 export type ReceiptFormState = { error: string | null; done?: boolean; receiptId?: string; receiptNo?: number };
@@ -32,7 +33,9 @@ export async function saveReceipt(_prev: ReceiptFormState, formData: FormData): 
   const parsed = parseReceipt(fromForm(formData), { today: todayIso() });
   if (!parsed.ok) return { error: parsed.error };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("client_receipts").insert(parsed.values).select("id, receipt_no").single();
+  // A transfer comes into, and a cheque is deposited in, the bank the form names (empty: the main account).
+  const row = { ...parsed.values, bank_account_id: bankAccountFor(parsed.values.method, fromForm(formData)("bank_account_id")) };
+  const { data, error } = await supabase.from("client_receipts").insert(row).select("id, receipt_no").single();
   if (error || !data) return { error: error ? dbMessage(error) : "تعذر حفظ السند" };
   refresh();
   return { error: null, done: true, receiptId: data.id, receiptNo: data.receipt_no };

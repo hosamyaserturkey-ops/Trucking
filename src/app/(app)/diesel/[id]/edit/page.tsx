@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES, FUEL_WRITERS } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { todayIso } from "@/lib/date-range";
 import { nowTime } from "@/lib/fuel";
 import { formatMoney } from "@/lib/money";
@@ -29,7 +30,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: f } = await supabase
     .from("fuel_fillups")
-    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, fx_rate, payment_method, voucher_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at")
+    .select("id, truck_id, driver_id, trip_id, station_id, filled_at, odometer, qty_unit, quantity, unit_price_minor, is_full_tank, currency, fx_rate, payment_method, bank_account_id, voucher_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at")
     .eq("id", id)
     .maybeSingle();
   if (!f) notFound();
@@ -40,6 +41,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
   const st = EXPENSE_STATUS[f.status];
   const at = new Date(f.filled_at);
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/diesel" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -51,6 +53,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
         {editable ? (
           <CardBody className="flex flex-col gap-6">
             <OfficeFillupForm
+              bankAccounts={bankAccounts}
               recordId={f.id}
               options={await loadOfficeOptions()}
               lastPrices={await loadLastFuelPrices()}
@@ -71,6 +74,7 @@ export default async function EditFillupPage({ params }: { params: Promise<{ id:
                 currency: f.currency,
                 fx_rate: String(f.fx_rate),
                 payment_method: f.payment_method,
+                bank_account_id: f.bank_account_id,
                 voucher_no: f.voucher_no,
                 notice_no: f.notice_no,
                 notes: f.notes,

@@ -5,6 +5,7 @@ import type { FillupFormState } from "@/app/(app)/diesel/actions";
 import type { OfficeOptions } from "@/lib/office-options";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
 import { FuelQuantityFields, type FuelQuantityInitial, type LastFuelPrices } from "@/components/fuel-quantity-fields";
 
@@ -16,6 +17,7 @@ const PAYMENTS: [string, string][] = [
 ];
 
 export type FillupInitial = FuelQuantityInitial & {
+  bank_account_id?: string | null;
   truck_id?: string;
   driver_id?: string | null;
   trip_id?: string | null;
@@ -41,10 +43,12 @@ export function OfficeFillupForm({
   initial = {},
   action,
   submitLabel,
+  bankAccounts = [],
   note,
 }: {
   recordId?: string;
   options: Pick<OfficeOptions, "trucks" | "drivers" | "trips" | "stations" | "rates">;
+  bankAccounts?: BankOption[];
   lastPrices: LastFuelPrices;
   today: string;
   time: string;
@@ -57,6 +61,7 @@ export function OfficeFillupForm({
   const [truckId, setTruckId] = useState(initial.truck_id ?? "");
   const [driverId, setDriverId] = useState(initial.driver_id ?? "");
   const [currency, setCurrency] = useState(initial.currency ?? "JOD");
+  const [method, setMethod] = useState(initial.payment_method ?? "cash");
   const [fxRate, setFxRate] = useState(initial.fx_rate ?? options.rates[initial.currency ?? "JOD"] ?? "1");
 
   const truck = options.trucks.find((t) => t.id === truckId);
@@ -141,7 +146,7 @@ export function OfficeFillupForm({
           </Field>
         ) : null}
         <Field label="طريقة الدفع" htmlFor="payment_method">
-          <Select id="payment_method" name="payment_method" defaultValue={initial.payment_method ?? "cash"}>
+          <Select id="payment_method" name="payment_method" value={method} onChange={(e) => setMethod(e.target.value)}>
             {PAYMENTS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -149,6 +154,7 @@ export function OfficeFillupForm({
             ))}
           </Select>
         </Field>
+        {method === "card" ? <BankAccountField accounts={bankAccounts} defaultValue={initial.bank_account_id} label="حساب البطاقة البنكي" /> : null}
         <Field label="رقم سند الصرف" htmlFor="voucher_no" hint="من دفتر السندات؛ لا يتكرر">
           <Input id="voucher_no" name="voucher_no" dir="ltr" defaultValue={initial.voucher_no ?? ""} />
         </Field>

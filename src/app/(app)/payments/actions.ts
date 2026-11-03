@@ -6,6 +6,7 @@ import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { parseIssuedChequeStatus, parseSupplierPayment } from "@/lib/payables";
+import { bankAccountFor } from "@/lib/bank";
 import { describeDbError } from "@/lib/master-data-parse";
 
 export type PaymentFormState = { error: string | null; done?: boolean; paymentId?: string; paymentNo?: number };
@@ -32,7 +33,9 @@ export async function saveSupplierPayment(_prev: PaymentFormState, formData: For
   const parsed = parseSupplierPayment(fromForm(formData), { today: todayIso() });
   if (!parsed.ok) return { error: parsed.error };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("supplier_payments").insert(parsed.values).select("id, payment_no").single();
+  // A transfer goes out of, and a cheque is drawn on, the bank the form names (empty: the main account).
+  const row = { ...parsed.values, bank_account_id: bankAccountFor(parsed.values.method, fromForm(formData)("bank_account_id")) };
+  const { data, error } = await supabase.from("supplier_payments").insert(row).select("id, payment_no").single();
   if (error || !data) return { error: error ? dbMessage(error) : "تعذر حفظ الدفعة" };
   refresh();
   return { error: null, done: true, paymentId: data.id, paymentNo: data.payment_no };

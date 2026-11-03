@@ -24,7 +24,7 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
   const { saved } = await searchParams;
   const supabase = await createClient();
 
-  const [driverRes, tripsRes, activeRes, balanceRes, expensesRes, fuelRes] = await Promise.all([
+  const [driverRes, tripsRes, activeRes, balanceRes, expensesRes, fuelRes, payRes] = await Promise.all([
     supabase.from("drivers").select("id, full_name, license_expiry, license_file_path, default_truck_id").maybeSingle(),
     supabase
       .from("trip_profit_v")
@@ -44,6 +44,8 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
       )
       // What the driver sent in or paid from the advance, not company costs such as wages.
       .or(`submitted_by.eq.${profile.user_id},payment_method.eq.driver_advance`)
+      // His load pay has its own list.
+      .eq("is_load_pay", false)
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20),
@@ -53,6 +55,13 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
         "id, filled_at, odometer, qty_unit, quantity, is_full_tank, currency, amount_minor, payment_method, status, rejection_reason, receipt_path, settlement_id, trip:trips(trip_no)",
       )
       .order("filled_at", { ascending: false })
+      .limit(20),
+    // His pay for each load, priced by the office, newest first.
+    supabase
+      .from("expenses")
+      .select("id, expense_date, description, amount_minor, settlement_id, trip:trips(trip_no)")
+      .eq("is_load_pay", true)
+      .order("expense_date", { ascending: false })
       .limit(20),
   ]);
   const driver = driverRes.data;
@@ -227,9 +236,9 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
             />
             <Stat label="عهد مستلمة" value={formatMoney(balance?.open_advances_base_minor ?? 0, "JOD")} hint="منذ آخر تسوية" />
             <Stat
-              label="مصاريف وديزل معتمدة"
+              label="مصاريف وديزل وأجور نقلات"
               value={formatMoney(balance?.open_expenses_base_minor ?? 0, "JOD")}
-              hint={`منها ديزل ${formatMoney(balance?.open_fuel_base_minor ?? 0, "JOD")}`}
+              hint={`منها ديزل ${formatMoney(balance?.open_fuel_base_minor ?? 0, "JOD")} · أجور ${formatMoney(balance?.open_load_pay_base_minor ?? 0, "JOD")}`}
             />
             <Stat
               label="بانتظار الموافقة"
@@ -305,6 +314,34 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
             </ul>
           )}
         </Card>
+
+        {(payRes.data ?? []).length ? (
+          <Card>
+            <CardHeader title="أجور نقلاتي" subtitle="تسعّرها الإدارة لكل نقلة، وتُضاف لحسابك وتُسوّى مع العهدة" />
+            <ul className="divide-y divide-border">
+              {(payRes.data ?? []).map((p) => (
+                <li key={p.id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium">{p.description}</p>
+                    <p className="text-xs text-muted">
+                      <span className="num">{formatDate(p.expense_date)}</span>
+                      {(p.trip as { trip_no: number } | null)?.trip_no ? (
+                        <>
+                          {" "}
+                          · رحلة <span className="num">{(p.trip as { trip_no: number }).trip_no}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="num font-semibold text-success">{formatMoney(p.amount_minor, "JOD")}</span>
+                    <Badge tone={p.settlement_id ? "neutral" : "success"}>{p.settlement_id ? "مسوّاة" : "في حسابك"}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader title="رحلاتي" subtitle="آخر 30 رحلة" />
