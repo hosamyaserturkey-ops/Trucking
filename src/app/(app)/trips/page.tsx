@@ -16,6 +16,7 @@ import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
 import { claimStatus } from "@/lib/loading-sheet";
+import { refHref } from "@/components/ref-search";
 
 export const metadata: Metadata = { title: "الرحلات" };
 
@@ -171,9 +172,15 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                         {t.trip_no}
                       </Link>
                       {ref?.client_ref ? (
-                        <span className="num block text-xs text-muted" dir="ltr">
-                          {ref.client_ref}
-                        </span>
+                        finance ? (
+                          <Link href={refHref(ref.client_ref)} className="num block text-xs text-muted hover:underline" dir="ltr" title="كشف حساب الزبون عند هذه النقلة">
+                            {ref.client_ref}
+                          </Link>
+                        ) : (
+                          <span className="num block text-xs text-muted" dir="ltr">
+                            {ref.client_ref}
+                          </span>
+                        )
                       ) : null}
                     </Td>
                     <Td className="num whitespace-nowrap">{formatDate(t.start_date)}</Td>

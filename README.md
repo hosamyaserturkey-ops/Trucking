@@ -113,7 +113,11 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - Posting: Dr cash, bank, cheques under collection (1104) or discount allowed (4103); Cr the customer.
   - Cheques waiting to be collected are listed by due date. Mark one deposited, cleared (moves to the bank) or bounced (back on the customer's account).
 - **ذمم العملاء (`/receivables`):** each customer's balance, the overdue part (oldest invoices paid first), cheques not collected yet and loads not invoiced yet.
-- **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form.
+- **كشف حساب زبون (`/receivables/<customer>`):** invoices, receipts and bounced cheques with the running balance, an A4 print for the customer, and a receipt form. Below the movements:
+  - **نقلات لم تتم المطالبة بها:** every finished load not invoiced yet, whatever its date, with its reference, truck, route, the customer's document and freight, and the count and total.
+  - **الفواتير ونقلاتها:** the period's invoices, each with its loads (by reference) and how far it is paid: مدفوعة, مدفوعة جزئياً or غير مدفوعة, with what is still owed. Payments settle the oldest invoices first (the same rule as the overdue amount), and a cheque in hand counts as paid. The cards above count paid, partly paid and unpaid invoices.
+  - **النقلات حسب الشهر:** the period's loads per month: claimed (invoiced) and not claimed, with their amounts.
+- **البحث برقم الإشارة (`/receivables/ref`):** type a load's reference (`ARB-0041`; `arb 41`, `ARB0041` and Arabic digits work too) or the customer's document number. One match opens the customer's statement from the start of the load's year, with a card for the load (its claim status, invoice, payment, and links to that day's loading sheet and the load) and the load marked in the lists; several matches are listed. The search box is on ذمم العملاء and on every statement, and a load's reference on the loading sheet, the trips list and an invoice leads there (manager and accountant).
 - Invoices, receipts and customer accounts are for the manager and the accountant; company details are for the manager.
 
 ## Supplier payments (دفعات الموردين وذممهم)

@@ -12,6 +12,7 @@ import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { Balance } from "@/components/ledger-bits";
+import { RefSearch } from "@/components/ref-search";
 
 export const metadata: Metadata = { title: "ذمم العملاء" };
 
@@ -42,6 +43,7 @@ export default async function ReceivablesPage({ searchParams }: { searchParams: 
           </div>
         }
       />
+      <RefSearch className="mb-4" />
       <div className="flex flex-col gap-5">
         <StatGrid>
           <Stat label="إجمالي الذمم" value={formatMoney(sum("balance_minor"), "JOD", { fractionDigits: 0 })} />

@@ -169,6 +169,13 @@ export const INVOICE_STATUS: Record<string, { label: string; tone: Tone }> = {
   cancelled: { label: "ملغاة", tone: "neutral" },
 };
 
+/** How far an issued invoice is paid (oldest invoices are paid first). */
+export const INVOICE_PAY_STATE: Record<"paid" | "partial" | "unpaid", { label: string; tone: Tone }> = {
+  paid: { label: "مدفوعة", tone: "success" },
+  partial: { label: "مدفوعة جزئياً", tone: "warning" },
+  unpaid: { label: "غير مدفوعة", tone: "danger" },
+};
+
 export const RECEIPT_METHOD: Record<string, string> = {
   cash: "نقداً",
   bank: "تحويل بنكي",
