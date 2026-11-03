@@ -73,6 +73,10 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
 - **Freight counts as revenue:** a sheet line is stored as a finished trip, so it counts in truck profit, fleet totals and Truck 360.
 - **In the trips list,** sheet lines are marked **كشف**. Normal trips (plan, start and finish with odometer) still work as before.
 - **Totals and printing:** the sheet shows totals (loads, tons, freight) for a day or a period, filtered by truck or customer. It prints as an A4 landscape sheet with signature lines.
+- **Claimed or not (المطالبة):** each load is coloured by whether the customer has been claimed for it, never by its amounts:
+  - **green, تمت المطالبة:** the load is on an invoice (with the invoice number for the manager and the accountant);
+  - **red, لم تتم المطالبة:** a finished customer load not invoiced yet. It turns red again if its invoice is cancelled.
+  - The sheet counts both, with their freight. The colours and the words show on the sheet, its print and the trips list (planned, running and cancelled trips and empty returns stay uncoloured), and the words go to the Excel export. On the trips list the profit is no longer coloured by its sign.
 - **Who can do what:** the manager and the dispatcher add, edit and delete lines; the accountant views.
 
 ## Journal entries and account statements (القيود وكشف الحساب)

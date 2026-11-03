@@ -14,6 +14,8 @@ import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, EmptyState, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
+import { CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
+import { claimStatus } from "@/lib/loading-sheet";
 
 export const metadata: Metadata = { title: "الرحلات" };
 
@@ -44,12 +46,16 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
   if (truck) query = query.eq("truck_id", truck);
   if (driver) query = query.eq("driver_id", driver);
 
-  // Loading sheet lines and customer references live on trips, not in the profit view.
+  // Loading sheet lines, customer references and the invoice a load is on
+  // (its claim status) live on trips, not in the profit view. Same rows as above.
   let refsQuery = supabase
     .from("trips")
-    .select("id, entry_source, client_ref")
+    .select("id, entry_source, client_ref, invoice_id")
     .or(`${tripInRange(range)},status.eq.in_progress,status.eq.planned`)
+    .order("start_date", { ascending: false })
+    .order("trip_no", { ascending: false })
     .limit(500);
+  if (status) refsQuery = refsQuery.eq("status", status as "planned" | "in_progress" | "completed" | "cancelled");
   if (truck) refsQuery = refsQuery.eq("truck_id", truck);
   if (driver) refsQuery = refsQuery.eq("driver_id", driver);
 
@@ -149,20 +155,24 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                 <Th className="text-end">الأجرة</Th>
                 {finance ? <Th className="text-end">الربح</Th> : null}
                 <Th>الحالة</Th>
+                <Th>المطالبة</Th>
               </tr>
             </thead>
             <tbody>
               {trips.map((t) => {
                 const st = TRIP_STATUS[t.status ?? "planned"];
+                const ref = refs.get(t.trip_id ?? "");
+                // Green once the customer is claimed (invoiced), red until then; not by the amounts.
+                const claim = claimStatus({ ...t, invoice_id: ref?.invoice_id ?? null });
                 return (
-                  <Tr key={t.trip_id}>
+                  <Tr key={t.trip_id} tone={claim ? CLAIM_TONE[claim] : undefined}>
                     <Td>
                       <Link href={`/trips/${t.trip_id}`} className="num font-semibold text-primary hover:underline">
                         {t.trip_no}
                       </Link>
-                      {refs.get(t.trip_id ?? "")?.client_ref ? (
+                      {ref?.client_ref ? (
                         <span className="num block text-xs text-muted" dir="ltr">
-                          {refs.get(t.trip_id ?? "")?.client_ref}
+                          {ref.client_ref}
                         </span>
                       ) : null}
                     </Td>
@@ -176,19 +186,20 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                     <Td className="num text-end">{formatInt(t.distance_km)}</Td>
                     <Td className="num whitespace-nowrap text-end">{formatMoney(t.freight_minor, t.currency ?? "JOD")}</Td>
                     {finance ? (
-                      <Td
-                        className={`num whitespace-nowrap text-end ${(t.profit_base_minor ?? 0) >= 0 ? "text-success" : "text-danger"}`}
-                      >
+                      <Td className="num whitespace-nowrap text-end">
                         {t.status === "completed" ? formatMoney(t.profit_base_minor, "JOD", { withCurrency: false }) : "—"}
                       </Td>
                     ) : null}
                     <Td className="whitespace-nowrap">
                       <Badge tone={st.tone}>{st.label}</Badge>
-                      {refs.get(t.trip_id ?? "")?.entry_source === "sheet" ? (
+                      {ref?.entry_source === "sheet" ? (
                         <span className="ms-1">
                           <Badge tone="info">كشف</Badge>
                         </span>
                       ) : null}
+                    </Td>
+                    <Td className="whitespace-nowrap">
+                      <ClaimStatusText claim={claim} />
                     </Td>
                   </Tr>
                 );

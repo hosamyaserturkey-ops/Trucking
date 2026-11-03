@@ -102,3 +102,33 @@ export function sheetTotals(rows: { cargo_weight_tons: number | null; freight_ba
   }
   return { loads: rows.length, tons: Math.round(tons * 100) / 100, freightBaseMinor: freight };
 }
+
+/**
+ * Whether the customer has been claimed for a load (مطالبة التاجر): "claimed"
+ * once the load is on an invoice, "unclaimed" until then. Only a finished load
+ * for a customer can be claimed; planned, running and cancelled trips and empty
+ * returns have no claim status (null). The freight does not matter.
+ */
+export type ClaimStatus = "claimed" | "unclaimed";
+
+export function claimStatus(t: {
+  status: string | null;
+  client_id: string | null;
+  is_empty_return: boolean | null;
+  invoice_id: string | null;
+}): ClaimStatus | null {
+  if (t.invoice_id) return "claimed";
+  if (t.status !== "completed" || !t.client_id || t.is_empty_return) return null;
+  return "unclaimed";
+}
+
+/** How many loads, and how much freight in JOD (minor units), are claimed and not claimed yet. */
+export function claimTotals(rows: { claim: ClaimStatus | null; freight_base_minor: number }[]) {
+  const out = { claimed: { loads: 0, freightBaseMinor: 0 }, unclaimed: { loads: 0, freightBaseMinor: 0 } };
+  for (const r of rows) {
+    if (!r.claim) continue;
+    out[r.claim].loads += 1;
+    out[r.claim].freightBaseMinor += r.freight_base_minor;
+  }
+  return out;
+}
