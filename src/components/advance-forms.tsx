@@ -167,7 +167,7 @@ export function SettleForm({
         <dd className="num font-medium">{preview.count}</dd>
         <dt className="text-muted">العهد</dt>
         <dd className="num font-medium">{formatMoney(preview.advances, "JOD")}</dd>
-        <dt className="text-muted">المصاريف والديزل</dt>
+        <dt className="text-muted">المصاريف والديزل وأجور النقلات</dt>
         <dd className="num font-medium">{formatMoney(preview.expenses, "JOD")}</dd>
         <dt className="text-muted">النتيجة</dt>
         <dd className={`font-semibold ${diff > 0 ? "text-warning" : diff < 0 ? "text-success" : ""}`}>{outcome}</dd>
@@ -176,6 +176,26 @@ export function SettleForm({
       <Button type="submit" disabled={pending || preview.count === 0} className="w-fit">
         {pending ? "جارٍ التسوية…" : "تسوية"}
       </Button>
+    </form>
+  );
+}
+
+/** The driver's pay for one load, typed by hand; empty clears it. */
+export function LoadPayForm({ action, amount, notes }: { action: Action; amount: string; notes: string }) {
+  const [state, formAction, pending] = useActionState(action, { error: null });
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2">
+      {/* Fixed widths on wrappers: the inputs themselves are full width. */}
+      <span className="w-24">
+        <Input name="amount" defaultValue={amount} inputMode="decimal" dir="ltr" placeholder="0.000" aria-label="أجرة السائق بالدينار" className="text-end" />
+      </span>
+      <span className="w-36">
+        <Input name="notes" defaultValue={notes} placeholder="ملاحظة" aria-label="ملاحظة" />
+      </span>
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "…" : amount ? "تعديل" : "تسعير"}
+      </Button>
+      {state.error ? <span className="w-full text-xs text-danger">{state.error}</span> : null}
     </form>
   );
 }

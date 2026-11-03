@@ -29,7 +29,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
   const { data: e } = await supabase
     .from("expenses")
     .select(
-      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, reference_no, voucher_no, customs_declaration_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at",
+      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, reference_no, voucher_no, customs_declaration_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at, is_load_pay",
     )
     .eq("id", id)
     .maybeSingle();
@@ -38,6 +38,15 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
 
   let blocked: React.ReactNode = null;
   if (e.settlement_id) blocked = "هذا المصروف داخل في تسوية عهدة ولا يمكن تعديله.";
+  else if (e.is_load_pay)
+    blocked = (
+      <>
+        هذه أجرة السائق لنقلة، وتُسعّر من صفحة السائق.{" "}
+        <LinkButton href={`/advances/${e.driver_id}#pricing`} variant="secondary" className="ms-2">
+          تسعير النقلات
+        </LinkButton>
+      </>
+    );
   else if (e.status === "rejected") blocked = "هذا المصروف مرفوض ولا يُعدّل؛ سجّل مصروفاً جديداً إذا لزم.";
   else if (e.status === "submitted")
     blocked = (

@@ -27,23 +27,29 @@ export default async function AdvancesPage() {
     supabase.from("currencies").select("code, rate_to_base"),
   ]);
   const rows = (balancesRes.data ?? []).filter(
-    (r) => r.is_active || r.balance_base_minor !== 0 || (r.pending_count ?? 0) > 0,
+    (r) => r.is_active || r.balance_base_minor !== 0 || (r.pending_count ?? 0) > 0 || (r.unpriced_loads ?? 0) > 0,
   );
   const rates = Object.fromEntries((currenciesRes.data ?? []).map((c) => [c.code, String(c.rate_to_base ?? 1)]));
 
   const withDrivers = rows.reduce((s, r) => s + Math.max(r.balance_base_minor ?? 0, 0), 0);
   const owedToDrivers = rows.reduce((s, r) => s + Math.max(-(r.balance_base_minor ?? 0), 0), 0);
   const pendingCount = rows.reduce((s, r) => s + (r.pending_count ?? 0), 0);
+  const unpriced = rows.reduce((s, r) => s + (r.unpriced_loads ?? 0), 0);
 
   return (
     <>
-      <PageHeader title="العهد" subtitle="رصيد كل سائق منذ آخر تسوية (بالدينار)" />
+      <PageHeader title="العهد وحسابات السائقين" subtitle="رصيد كل سائق منذ آخر تسوية: العهد عليه، والمصاريف التي دفعها وأجور نقلاته له (بالدينار)" />
       <div className="flex flex-col gap-5">
         <StatGrid>
           <Stat label="نقد لدى السائقين" value={formatMoney(withDrivers, "JOD", { fractionDigits: 0 })} />
           <Stat label="مستحق للسائقين" value={formatMoney(owedToDrivers, "JOD", { fractionDigits: 0 })} tone={owedToDrivers ? "success" : "neutral"} />
           <Stat label="مصاريف بانتظار الموافقة" value={formatInt(pendingCount)} tone={pendingCount ? "warning" : "neutral"} />
-          <Stat label="عدد السائقين" value={formatInt(rows.length)} />
+          <Stat
+            label="نقلات بانتظار التسعير"
+            value={formatInt(unpriced)}
+            hint="أجرة السائق لكل نقلة تُدخل من صفحته"
+            tone={unpriced ? "warning" : "neutral"}
+          />
         </StatGrid>
 
         <Card>
@@ -57,8 +63,10 @@ export default async function AdvancesPage() {
                   <Th>السائق</Th>
                   <Th className="text-end">عهد مفتوحة</Th>
                   <Th className="text-end">مصاريف وديزل</Th>
+                  <Th className="text-end">منها أجور نقلات</Th>
                   <Th className="text-end">الرصيد</Th>
                   <Th>بانتظار الموافقة</Th>
+                  <Th>بانتظار التسعير</Th>
                   <Th>آخر تسوية</Th>
                 </tr>
               </thead>
@@ -72,10 +80,22 @@ export default async function AdvancesPage() {
                     </Td>
                     <Td className="num text-end">{formatMoney(r.open_advances_base_minor, "JOD", { withCurrency: false })}</Td>
                     <Td className="num text-end">{formatMoney(r.open_expenses_base_minor, "JOD", { withCurrency: false })}</Td>
+                    <Td className="num text-end">
+                      {r.open_load_pay_count ? formatMoney(r.open_load_pay_base_minor, "JOD", { withCurrency: false }) : "—"}
+                    </Td>
                     <Td className="text-end whitespace-nowrap">
                       <BalanceText minor={r.balance_base_minor ?? 0} />
                     </Td>
                     <Td>{r.pending_count ? <Badge tone="warning">{formatInt(r.pending_count)}</Badge> : "—"}</Td>
+                    <Td>
+                      {r.unpriced_loads ? (
+                        <Link href={`/advances/${r.driver_id}#pricing`} className="hover:underline">
+                          <Badge tone="warning">{formatInt(r.unpriced_loads)} نقلة</Badge>
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
                     <Td className="num whitespace-nowrap">{r.last_settled_on ? formatDate(r.last_settled_on) : "—"}</Td>
                   </Tr>
                 ))}

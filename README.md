@@ -79,6 +79,25 @@ Arabic (RTL) accounting and fleet system for a trucking company. It is built aro
   - The sheet counts both, with their freight. The colours and the words show on the sheet, its print and the trips list (planned, running and cancelled trips and empty returns stay uncoloured), and the words go to the Excel export. On the trips list the profit is no longer coloured by its sign.
 - **Who can do what:** the manager and the dispatcher add, edit and delete lines; the accountant views.
 
+## Driver pay per load (أجرة السائق للنقلة)
+
+- **Each finished load is priced for its driver by hand:** the work varies too much for a fixed rate. The manager or the accountant types the pay on the driver's page (**تسعير النقلات للسائق**, under العهد): his loads since his last settlement with no pay yet, and the priced ones not settled yet, whose price can still change. Leaving the amount empty clears it. **إظهار النقلات الأقدم** lists every load never priced.
+- **His account moves at once.** The pay is an approved expense on the load, of the kind أجور ومكافآت السائقين, charged to the driver's account:
+
+  | Debit | Credit |
+  |---|---|
+  | 5106 أجور ومكافآت السائقين, on the truck | 1105 عهد السائقين (the driver) |
+
+  So his balance goes down by it (or what he is owed goes up), and it is settled with his advances and the expenses he paid. The settlement's difference is paid to him or returned by him in cash, as before. It also counts as a cost of the load, in Truck 360 and in the profit reports.
+- **The pay follows its load.** Its truck, driver, date (the load's end date) and description (`أجرة نقلة ARB-0041`) always come from the load, and only the amount and a note are typed. If the load's driver, truck or date changes, the pay moves with it. If the load is deleted, its pay goes too.
+- **Settled pay is locked.** Its amount can't change, and neither can the load's driver, truck, date or status, and the load can't be deleted.
+- **Where it shows:**
+  - **العهد:** each driver's open load pay and how many of his loads wait to be priced.
+  - **The driver's page:** pay lines in his open movements marked **أجرة نقلة**, and a warning while loads since his last settlement have no pay.
+  - **The driver's phone:** his pay per load under **أجور نقلاتي**, not in his expenses.
+  - **المصاريف:** pay rows link to the driver's pricing instead of the expense form.
+- **Who:** the manager and the accountant price; the database refuses anyone else (`set_load_driver_pay`, migration 27).
+
 ## Journal entries and account statements (القيود وكشف الحساب)
 
 - **Every expense, diesel fill-up, driver advance and settlement is posted automatically** as a journal entry once it counts (approved):

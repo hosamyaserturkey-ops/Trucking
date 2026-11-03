@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
-import { parseAdvance } from "@/lib/advances";
+import { parseAdvance, parseLoadPay } from "@/lib/advances";
 import { describeDbError } from "@/lib/master-data-parse";
 
 export type AdvanceFormState = { error: string | null; done?: boolean };
@@ -52,4 +52,20 @@ export async function settleDriver(driverId: string, _prev: AdvanceFormState, fo
   if (error) return { error: dbMessage(error) };
   revalidatePath("/advances", "layout");
   redirect(`/advances/${driverId}?settled=${data}`);
+}
+
+/** Price one finished load for its driver (or clear the price); his balance follows at once. */
+export async function priceLoad(tripId: string, _prev: AdvanceFormState, formData: FormData): Promise<AdvanceFormState> {
+  await requireRole(...FINANCE_ROLES);
+  const parsed = parseLoadPay(fromForm(formData));
+  if (!parsed.ok) return { error: parsed.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_load_driver_pay", {
+    p_trip_id: tripId,
+    p_amount_minor: parsed.values.amount_minor,
+    p_notes: parsed.values.notes ?? "",
+  });
+  if (error) return { error: dbMessage(error) };
+  revalidatePath("/advances", "layout");
+  return { error: null, done: true };
 }

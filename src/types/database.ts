@@ -892,6 +892,7 @@ export type Database = {
           expense_date: string
           fx_rate: number
           id: string
+          is_load_pay: boolean
           notes: string | null
           notice_no: string | null
           payment_method: string
@@ -923,6 +924,7 @@ export type Database = {
           expense_date: string
           fx_rate?: number
           id?: string
+          is_load_pay?: boolean
           notes?: string | null
           notice_no?: string | null
           payment_method?: string
@@ -954,6 +956,7 @@ export type Database = {
           expense_date?: string
           fx_rate?: number
           id?: string
+          is_load_pay?: boolean
           notes?: string | null
           notice_no?: string | null
           payment_method?: string
@@ -2814,8 +2817,39 @@ export type Database = {
           open_expenses_base_minor: number | null
           open_fuel_base_minor: number | null
           pending_base_minor: number | null
+          open_load_pay_base_minor: number | null
+          open_load_pay_count: number | null
           pending_count: number | null
           pending_fuel_count: number | null
+          unpriced_loads: number | null
+        }
+        Relationships: []
+      }
+      driver_loads_v: {
+        Row: {
+          cargo_description: string | null
+          cargo_weight_tons: number | null
+          client_id: string | null
+          client_name: string | null
+          client_ref: string | null
+          currency: string | null
+          distance_km: number | null
+          driver_id: string | null
+          entry_source: string | null
+          freight_base_minor: number | null
+          freight_minor: number | null
+          from_name: string | null
+          is_empty_return: boolean | null
+          load_date: string | null
+          pay_id: string | null
+          pay_minor: number | null
+          pay_notes: string | null
+          pay_settlement_id: string | null
+          to_name: string | null
+          trip_id: string | null
+          trip_no: number | null
+          truck_code: string | null
+          truck_id: string | null
         }
         Relationships: []
       }
@@ -3554,6 +3588,10 @@ export type Database = {
         Returns: string
       }
       set_opening_date: { Args: { p_date: string }; Returns: undefined }
+      set_load_driver_pay: {
+        Args: { p_amount_minor: number; p_notes?: string; p_trip_id: string }
+        Returns: string
+      }
       settle_driver_advance: {
         Args: { p_driver_id: string; p_notes?: string; p_settled_on?: string }
         Returns: string

@@ -45,7 +45,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
   let query = supabase
     .from("expenses")
     .select(
-      "id, expense_date, cost_scope, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, voucher_no, customs_declaration_no, status, receipt_path, settlement_id, truck:trucks(id, code), driver:drivers(full_name), category:expense_categories(name_ar)",
+      "id, expense_date, cost_scope, description, currency, amount_minor, amount_base_minor, payment_method, reference_no, voucher_no, customs_declaration_no, status, receipt_path, settlement_id, is_load_pay, driver_id, truck:trucks(id, code), driver:drivers(full_name), category:expense_categories(name_ar)",
     )
     .gte("expense_date", range.from)
     .lt("expense_date", range.to)
@@ -239,7 +239,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
                             <Paperclip className="size-4" aria-label="الإيصال" />
                           </a>
                         ) : null}
-                        {editable ? (
+                        {editable && e.is_load_pay ? (
+                          // A load's driver pay is priced from the driver's page.
+                          <Link href={`/advances/${e.driver_id}#pricing`} className="text-xs text-primary hover:underline">
+                            تسعير
+                          </Link>
+                        ) : editable ? (
                           <Link href={`/expenses/${e.id}/edit`} className="text-xs text-primary hover:underline">
                             تعديل
                           </Link>
