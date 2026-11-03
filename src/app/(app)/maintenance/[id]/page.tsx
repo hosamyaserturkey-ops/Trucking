@@ -5,6 +5,7 @@ import { ChevronRight, FileText } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { daysBetween, todayIso } from "@/lib/date-range";
 import { formatMoney, sumMinor } from "@/lib/money";
 import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
@@ -94,6 +95,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ id: 
       .join(" · "),
   }));
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/maintenance" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -240,6 +242,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ id: 
                 <p className="text-sm text-muted">أضف بنود الأمر قبل إغلاقه.</p>
               ) : (
                 <CloseWorkOrderForm
+                  bankAccounts={bankAccounts}
                   action={closeWorkOrder.bind(null, wo.id)}
                   today={today}
                   openedOn={wo.opened_on}

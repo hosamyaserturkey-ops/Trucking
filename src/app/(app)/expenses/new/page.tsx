@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { todayIso } from "@/lib/date-range";
 import { loadOfficeOptions } from "@/lib/office-options";
@@ -17,6 +18,7 @@ export default async function NewOfficeExpensePage({ searchParams }: { searchPar
   const options = await loadOfficeOptions();
   const t = options.trucks.find((x) => x.id === truck);
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/expenses" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -27,6 +29,7 @@ export default async function NewOfficeExpensePage({ searchParams }: { searchPar
       <Card>
         <CardBody>
           <OfficeExpenseForm
+            bankAccounts={bankAccounts}
             options={options}
             today={todayIso()}
             initial={t ? { truck_id: t.id, driver_id: t.driverId } : {}}

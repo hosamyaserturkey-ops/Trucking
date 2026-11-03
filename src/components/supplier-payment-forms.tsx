@@ -6,6 +6,7 @@ import type { PaymentFormState } from "@/app/(app)/payments/actions";
 import { ISSUED_CHEQUE_STATUS, SUPPLIER_PAYMENT_METHOD } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 
 type SupplierOption = { id: string; label: string; owed: string | null };
 type Action = (prev: PaymentFormState, formData: FormData) => Promise<PaymentFormState>;
@@ -16,11 +17,13 @@ export function SupplierPaymentForm({
   suppliers,
   today,
   supplierId,
+  bankAccounts = [],
 }: {
   action: Action;
   suppliers: SupplierOption[];
   today: string;
   supplierId?: string;
+  bankAccounts?: BankOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const [method, setMethod] = useState("cash");
@@ -70,10 +73,14 @@ export function SupplierPaymentForm({
         </div>
       </fieldset>
       {method === "bank" ? (
-        <Field label="رقم الحوالة / الإشعار" htmlFor="sp_ref">
-          <Input id="sp_ref" name="reference_no" dir="ltr" />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <BankAccountField accounts={bankAccounts} id="sp_bank" label="من الحساب البنكي" />
+          <Field label="رقم الحوالة / الإشعار" htmlFor="sp_ref">
+            <Input id="sp_ref" name="reference_no" dir="ltr" />
+          </Field>
+        </div>
       ) : null}
+      {method === "cheque" ? <BankAccountField accounts={bankAccounts} id="sp_bank" label="الشيك مسحوب على الحساب البنكي" /> : null}
       {method === "cheque" ? (
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="رقم الشيك" htmlFor="sp_cheque_no">

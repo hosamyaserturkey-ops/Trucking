@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  bankAccountFor,
+  parseBankMovement,
   normalizeHeader,
   parseBankAmount,
   parseBankDate,
@@ -177,5 +179,70 @@ describe("reconciliationLines", () => {
         unrecorded_out_minor: 5_000,
       }),
     ).toEqual({ adjustedBank: 1_250_000, adjustedBook: 1_240_000, difference: 10_000 });
+  });
+});
+
+describe("bankAccountFor", () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  it("keeps the bank for transfers, cards and cheques", () => {
+    expect(bankAccountFor("bank", id)).toBe(id);
+    expect(bankAccountFor("card", ` ${id} `)).toBe(id);
+    expect(bankAccountFor("cheque", id)).toBe(id);
+    expect(bankAccountFor("check", id)).toBe(id);
+  });
+  it("drops it for cash, credit and the rest, and when it is not an id", () => {
+    expect(bankAccountFor("cash", id)).toBeNull();
+    expect(bankAccountFor("credit", id)).toBeNull();
+    expect(bankAccountFor("driver_advance", id)).toBeNull();
+    expect(bankAccountFor("bank", "")).toBeNull();
+    expect(bankAccountFor("bank", "x")).toBeNull();
+    expect(bankAccountFor(null, id)).toBeNull();
+  });
+});
+
+describe("parseBankMovement", () => {
+  const TODAY = "2026-11-03";
+  const id = "22222222-2222-4222-8222-222222222222";
+  const form = (data: Record<string, string>) => (name: string) => data[name] ?? null;
+
+  it("fixes the direction and the other account for the common kinds", () => {
+    expect(parseBankMovement(form({ type: "cash_in", amount: "1,500", moved_on: "2026-11-01", reference_no: " ٧٧ " }), { today: TODAY })).toEqual({
+      ok: true,
+      values: {
+        type: "cash_in",
+        kind: "cash",
+        direction: "in",
+        moved_on: "2026-11-01",
+        amount_minor: 1_500_000,
+        counter_code: "1101",
+        counter_account_id: null,
+        truck_id: null,
+        reference_no: "77",
+        description: null,
+      },
+    });
+    expect(parseBankMovement(form({ type: "charges", amount: "2.5", truck_id: id }), { today: TODAY })).toMatchObject({
+      ok: true,
+      values: { kind: "charges", direction: "out", counter_code: "5204", truck_id: id, moved_on: TODAY },
+    });
+    expect(parseBankMovement(form({ type: "owner_out", amount: "100" }), { today: TODAY })).toMatchObject({
+      ok: true,
+      values: { kind: "owner", direction: "out", counter_code: "3301" },
+    });
+  });
+
+  it("needs the other bank for a transfer and the account for other movements", () => {
+    expect(parseBankMovement(form({ type: "transfer_out", amount: "10" }), { today: TODAY })).toMatchObject({ ok: false });
+    expect(parseBankMovement(form({ type: "transfer_out", amount: "10", counter_account_id: id }), { today: TODAY })).toMatchObject({
+      ok: true,
+      values: { kind: "transfer", direction: "out", counter_code: null, counter_account_id: id },
+    });
+    expect(parseBankMovement(form({ type: "other_in", amount: "10" }), { today: TODAY })).toMatchObject({ ok: false });
+  });
+
+  it("refuses a missing kind or amount, and a future date", () => {
+    expect(parseBankMovement(form({ amount: "10" }), { today: TODAY })).toMatchObject({ ok: false });
+    expect(parseBankMovement(form({ type: "cash_in", amount: "0" }), { today: TODAY })).toMatchObject({ ok: false });
+    expect(parseBankMovement(form({ type: "cash_in", amount: "5", moved_on: "2026-11-04" }), { today: TODAY })).toMatchObject({ ok: false });
   });
 });

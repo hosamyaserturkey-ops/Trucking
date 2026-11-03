@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, ChevronRight, Printer } from "lucide-react
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { addDays, todayIso } from "@/lib/date-range";
 import { openLedger } from "@/lib/advances";
 import { formatMoney } from "@/lib/money";
@@ -144,6 +145,7 @@ export default async function DriverAdvancePage({
   const today = todayIso();
   const pendingCount = balance.pending_count ?? 0;
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <PageHeader
@@ -337,6 +339,7 @@ export default async function DriverAdvancePage({
               <CardHeader title="صرف عهدة" />
               <CardBody>
                 <AdvanceForm
+                  bankAccounts={bankAccounts}
                   action={issueAdvance}
                   today={today}
                   rates={rates}

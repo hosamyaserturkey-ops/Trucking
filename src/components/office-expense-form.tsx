@@ -6,6 +6,7 @@ import type { OfficeOptions } from "@/lib/office-options";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 
 const PAYMENTS: [string, string][] = [
   ["cash", "نقداً"],
@@ -28,6 +29,7 @@ export type ExpenseInitial = {
   fx_rate?: string;
   amount?: string;
   payment_method?: string;
+  bank_account_id?: string | null;
   reference_no?: string | null;
   voucher_no?: string | null;
   customs_declaration_no?: string | null;
@@ -44,9 +46,11 @@ export function OfficeExpenseForm({
   initial = {},
   action,
   submitLabel,
+  bankAccounts = [],
 }: {
   recordId?: string;
   options: Pick<OfficeOptions, "trucks" | "drivers" | "trips" | "suppliers" | "categories" | "rates">;
+  bankAccounts?: BankOption[];
   today: string;
   initial?: ExpenseInitial;
   action: (prev: OfficeExpenseState, formData: FormData) => Promise<OfficeExpenseState>;
@@ -57,6 +61,7 @@ export function OfficeExpenseForm({
   const [truckId, setTruckId] = useState(initial.truck_id ?? "");
   const [driverId, setDriverId] = useState(initial.driver_id ?? "");
   const [currency, setCurrency] = useState(initial.currency ?? "JOD");
+  const [method, setMethod] = useState(initial.payment_method ?? "cash");
   const [fxRate, setFxRate] = useState(initial.fx_rate ?? options.rates[initial.currency ?? "JOD"] ?? "1");
   const trips = options.trips.filter((t) => t.truckId === truckId);
 
@@ -171,7 +176,7 @@ export function OfficeExpenseForm({
           </Field>
         ) : null}
         <Field label="طريقة الدفع" htmlFor="payment_method">
-          <Select id="payment_method" name="payment_method" defaultValue={initial.payment_method ?? "cash"}>
+          <Select id="payment_method" name="payment_method" value={method} onChange={(e) => setMethod(e.target.value)}>
             {PAYMENTS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -179,6 +184,7 @@ export function OfficeExpenseForm({
             ))}
           </Select>
         </Field>
+        {method === "bank" || method === "check" ? <BankAccountField accounts={bankAccounts} defaultValue={initial.bank_account_id} /> : null}
         <Field label="رقم المرجع / فاتورة المورد" htmlFor="reference_no">
           <Input id="reference_no" name="reference_no" dir="ltr" defaultValue={initial.reference_no ?? ""} />
         </Field>

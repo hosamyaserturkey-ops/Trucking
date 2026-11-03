@@ -4,6 +4,7 @@ import { Printer } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { todayIso } from "@/lib/date-range";
 import { statementFilter } from "@/lib/ledger";
 import { formatMoney, sumMinor } from "@/lib/money";
@@ -57,6 +58,7 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Sea
   const byMethod = (m: string) => sumMinor(rows.filter((r) => r.method === m && r.cheque_status !== "bounced").map((r) => r.amount_minor));
   const dueSoon = cheques.filter((c) => (c.cheque_due_date ?? "") <= today).length;
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <PageHeader title="المقبوضات" subtitle={`سندات القبض من ${formatDate(f.from)} إلى ${formatDate(f.to)} · المبالغ بالدينار`} />
@@ -64,7 +66,7 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Sea
         <Card>
           <CardHeader title="سند قبض جديد" subtitle="يُرحّل تلقائياً: مدين الصندوق أو البنك أو الشيكات، دائن حساب الزبون" />
           <CardBody>
-            <ReceiptForm action={saveReceipt} clients={clients} today={today} clientId={client || undefined} />
+            <ReceiptForm bankAccounts={bankAccounts} action={saveReceipt} clients={clients} today={today} clientId={client || undefined} />
           </CardBody>
         </Card>
 

@@ -6,6 +6,7 @@ import { settlementPreview, type LedgerInput } from "@/lib/advances";
 import { formatMoney } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 
 type Option = { id: string; label: string };
 type Action = (prev: AdvanceFormState, formData: FormData) => Promise<AdvanceFormState>;
@@ -18,6 +19,7 @@ export function AdvanceForm({
   drivers,
   driverId,
   trips = [],
+  bankAccounts = [],
 }: {
   action: Action;
   today: string;
@@ -25,10 +27,12 @@ export function AdvanceForm({
   drivers?: Option[];
   driverId?: string;
   trips?: Option[];
+  bankAccounts?: BankOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const [currency, setCurrency] = useState("JOD");
   const [fxRate, setFxRate] = useState(rates.JOD ?? "1");
+  const [method, setMethod] = useState("cash");
   // A new key after each success clears the inputs.
   const [round, setRound] = useState(0);
   const [lastDone, setLastDone] = useState<AdvanceFormState | null>(null);
@@ -94,11 +98,12 @@ export function AdvanceForm({
           </Field>
         ) : null}
         <Field label="طريقة الصرف" htmlFor="adv_method">
-          <Select id="adv_method" name="method" defaultValue="cash">
+          <Select id="adv_method" name="method" value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="cash">نقداً</option>
             <option value="bank">تحويل بنكي</option>
           </Select>
         </Field>
+        {method === "bank" ? <BankAccountField accounts={bankAccounts} id="adv_bank" /> : null}
         <Field label="رقم سند الصرف" htmlFor="adv_voucher">
           <Input id="adv_voucher" name="voucher_no" dir="ltr" />
         </Field>

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          bank_account_no: string | null
           code: string
           created_at: string
           id: string
@@ -27,6 +28,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bank_account_no?: string | null
           code: string
           created_at?: string
           id?: string
@@ -38,6 +40,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bank_account_no?: string | null
           code?: string
           created_at?: string
           id?: string
@@ -119,6 +122,55 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bank_movements: {
+        Row: {
+          amount_minor: number
+          bank_account_id: string
+          counter_account_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          direction: string
+          id: string
+          kind: string
+          moved_on: string
+          movement_no: number
+          reference_no: string | null
+          truck_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          bank_account_id: string
+          counter_account_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          direction: string
+          id?: string
+          kind: string
+          moved_on: string
+          reference_no?: string | null
+          truck_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          bank_account_id?: string
+          counter_account_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          direction?: string
+          id?: string
+          kind?: string
+          moved_on?: string
+          reference_no?: string | null
+          truck_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       bank_statement_lines: {
         Row: {
@@ -242,6 +294,7 @@ export type Database = {
       client_receipts: {
         Row: {
           amount_minor: number
+          bank_account_id: string | null
           cheque_bank: string | null
           cheque_due_date: string | null
           cheque_no: string | null
@@ -261,6 +314,7 @@ export type Database = {
         }
         Insert: {
           amount_minor: number
+          bank_account_id?: string | null
           cheque_bank?: string | null
           cheque_due_date?: string | null
           cheque_no?: string | null
@@ -280,6 +334,7 @@ export type Database = {
         }
         Update: {
           amount_minor?: number
+          bank_account_id?: string | null
           cheque_bank?: string | null
           cheque_due_date?: string | null
           cheque_no?: string | null
@@ -524,6 +579,7 @@ export type Database = {
         Row: {
           amount_base_minor: number
           amount_minor: number
+          bank_account_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -542,6 +598,7 @@ export type Database = {
         Insert: {
           amount_base_minor?: number
           amount_minor: number
+          bank_account_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -560,6 +617,7 @@ export type Database = {
         Update: {
           amount_base_minor?: number
           amount_minor?: number
+          bank_account_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -881,6 +939,7 @@ export type Database = {
         Row: {
           amount_base_minor: number
           amount_minor: number
+          bank_account_id: string | null
           category_id: string
           cost_scope: string
           created_at: string
@@ -913,6 +972,7 @@ export type Database = {
         Insert: {
           amount_base_minor?: number
           amount_minor: number
+          bank_account_id?: string | null
           category_id: string
           cost_scope?: string
           created_at?: string
@@ -945,6 +1005,7 @@ export type Database = {
         Update: {
           amount_base_minor?: number
           amount_minor?: number
+          bank_account_id?: string | null
           category_id?: string
           cost_scope?: string
           created_at?: string
@@ -1115,6 +1176,7 @@ export type Database = {
         Row: {
           amount_base_minor: number
           amount_minor: number
+          bank_account_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -1147,6 +1209,7 @@ export type Database = {
         Insert: {
           amount_base_minor?: number
           amount_minor: number
+          bank_account_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1179,6 +1242,7 @@ export type Database = {
         Update: {
           amount_base_minor?: number
           amount_minor?: number
+          bank_account_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1868,6 +1932,7 @@ export type Database = {
       supplier_payments: {
         Row: {
           amount_minor: number
+          bank_account_id: string | null
           cheque_bank: string | null
           cheque_due_date: string | null
           cheque_no: string | null
@@ -1888,6 +1953,7 @@ export type Database = {
         }
         Insert: {
           amount_minor: number
+          bank_account_id?: string | null
           cheque_bank?: string | null
           cheque_due_date?: string | null
           cheque_no?: string | null
@@ -1908,6 +1974,7 @@ export type Database = {
         }
         Update: {
           amount_minor?: number
+          bank_account_id?: string | null
           cheque_bank?: string | null
           cheque_due_date?: string | null
           cheque_no?: string | null
@@ -2557,6 +2624,7 @@ export type Database = {
       }
       work_orders: {
         Row: {
+          bank_account_id: string | null
           cancel_reason: string | null
           closed_by: string | null
           closed_on: string | null
@@ -2584,6 +2652,7 @@ export type Database = {
           workshop_id: string | null
         }
         Insert: {
+          bank_account_id?: string | null
           cancel_reason?: string | null
           closed_by?: string | null
           closed_on?: string | null
@@ -2611,6 +2680,7 @@ export type Database = {
           workshop_id?: string | null
         }
         Update: {
+          bank_account_id?: string | null
           cancel_reason?: string | null
           closed_by?: string | null
           closed_on?: string | null
@@ -2729,6 +2799,23 @@ export type Database = {
           id: string | null
           kind: string | null
           statement_id: string | null
+        }
+        Relationships: []
+      }
+      bank_accounts_v: {
+        Row: {
+          account_id: string | null
+          balance_minor: number | null
+          bank_account_no: string | null
+          cheques_in_count: number | null
+          cheques_in_minor: number | null
+          cheques_out_count: number | null
+          cheques_out_minor: number | null
+          code: string | null
+          expected_minor: number | null
+          is_active: boolean | null
+          last_movement_on: string | null
+          name_ar: string | null
         }
         Relationships: []
       }
@@ -3548,6 +3635,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_bank_account: {
+        Args: { p_account_no?: string; p_name: string }
+        Returns: string
+      }
       create_invoice: {
         Args: {
           p_client_id: string
@@ -3591,6 +3682,10 @@ export type Database = {
       set_load_driver_pay: {
         Args: { p_amount_minor: number; p_notes?: string; p_trip_id: string }
         Returns: string
+      }
+      update_bank_account: {
+        Args: { p_account_id: string; p_account_no?: string; p_name: string }
+        Returns: undefined
       }
       settle_driver_advance: {
         Args: { p_driver_id: string; p_notes?: string; p_settled_on?: string }

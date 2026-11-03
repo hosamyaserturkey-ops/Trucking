@@ -7,6 +7,7 @@ import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { parseAdvance, parseLoadPay } from "@/lib/advances";
+import { bankAccountFor } from "@/lib/bank";
 import { describeDbError } from "@/lib/master-data-parse";
 
 export type AdvanceFormState = { error: string | null; done?: boolean };
@@ -27,7 +28,9 @@ export async function issueAdvance(_prev: AdvanceFormState, formData: FormData):
   const parsed = parseAdvance(fromForm(formData), { today: todayIso() });
   if (!parsed.ok) return { error: parsed.error };
   const supabase = await createClient();
-  const { error } = await supabase.from("driver_advances").insert(parsed.values);
+  const { error } = await supabase
+    .from("driver_advances")
+    .insert({ ...parsed.values, bank_account_id: bankAccountFor(parsed.values.method, fromForm(formData)("bank_account_id")) });
   if (error) return { error: dbMessage(error) };
   revalidatePath("/advances", "layout");
   return { error: null, done: true };

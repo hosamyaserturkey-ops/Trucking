@@ -8,6 +8,7 @@ import { WO_PAYMENT_METHOD, WORK_ORDER_KIND, WORK_ORDER_LINE_TYPE, SERVICE_STATU
 import { lineTotal } from "@/lib/work-orders";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 import { Badge } from "@/components/ui/badge";
 import { ReceiptInput, useReceiptAction } from "@/components/receipt-input";
 
@@ -188,6 +189,7 @@ export function CloseWorkOrderForm({
   invoiceNo,
   schedules,
   total,
+  bankAccounts = [],
 }: {
   action: Action;
   today: string;
@@ -196,6 +198,7 @@ export function CloseWorkOrderForm({
   invoiceNo: string | null;
   schedules: ScheduleChoice[];
   total: string;
+  bankAccounts?: BankOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const [method, setMethod] = useState(hasWorkshop ? "credit" : "cash");
@@ -245,6 +248,7 @@ export function CloseWorkOrderForm({
           <Input id="cl_voucher" name="voucher_no" dir="ltr" className="sm:max-w-xs" />
         </Field>
       ) : null}
+      {method === "bank" ? <BankAccountField accounts={bankAccounts} id="cl_bank" label="من الحساب البنكي" /> : null}
       {method === "bank" ? (
         <Field label="رقم الإشعار / الحوالة" htmlFor="cl_notice">
           <Input id="cl_notice" name="notice_no" dir="ltr" className="sm:max-w-xs" />

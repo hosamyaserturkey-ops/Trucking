@@ -247,6 +247,41 @@ Both reports read the same figures as Truck 360 and the fleet board (closed work
 - **Closing:** when the difference is zero and every bank line is matched, the statement is closed. It then never changes, and an entry matched in it cannot be reversed (e.g. by editing a bank receipt) until it is reopened. While a statement is open, reversing a matched entry undoes the match so its line shows up again.
 - **Printing:** an A4 reconciliation statement with both sides, the outstanding items and signature lines (`/print/bank/<id>`).
 
+## Bank accounts and their statements (الحسابات البنكية)
+
+- **Several bank accounts:**
+  - 1102 is the main account. Each other one is a sub-account numbered 1102NN, added on **الحسابات البنكية (`/banks`)** with its name and account number or IBAN; both can be changed there.
+  - Every bank account has its own statement, reconciliation (**مطابقة البنك**) and opening balance (**الأرصدة الافتتاحية**).
+  - The statement of 1102 under **كشف الحسابات** covers them all.
+- **Which bank a document uses:** with more than one account, each form that pays through a bank asks which account:
+  - an expense paid by transfer or cheque;
+  - diesel paid by card;
+  - an advance by transfer;
+  - a receipt: the account a transfer came into, or a cheque is deposited and collected in;
+  - a supplier payment: the account a transfer left, or a cheque is drawn on;
+  - closing a work order paid by transfer.
+
+  A document that names no bank, including everything entered before, uses 1102. Changing the bank re-posts the document.
+- **The list (`/banks`):** each account's balance in the books, customers' cheques still to be collected into it, our cheques it hasn't paid yet, the balance once they clear, and the last movement.
+- **كشف حساب البنك (`/banks/<account>`):**
+  - The opening balance, then every movement: date, entry, what it is (with a link to its document), its documents (voucher, notice, reference, cheque, receipt, payment), money in and money out, and the running balance.
+  - The cheques still on the way in both directions.
+  - Print (A4) and Excel export.
+- **Other movements on the account:** the ones no other screen makes, entered on the account's statement and posted at once:
+
+  | Kind | Into the bank | Out of the bank |
+  |---|---|---|
+  | Cash | from the cash box (1101) | to the cash box |
+  | Transfer | from another bank account | to another bank account |
+  | The owner | from the owner (3301 جاري المالك) | to the owner |
+  | Charges / interest | interest (4102) | bank charges (5204), optionally on a truck |
+  | Other | from any account you choose | to any account you choose |
+
+  - Customers, suppliers, advances and cheques are refused here: they have their own screens.
+  - Money between two banks is always a transfer.
+  - A movement entered by mistake is deleted from the statement, and its entry is reversed.
+  - Manager and accountant only (`bank_movements`, migration 28).
+
 ## JoFotara e-invoicing (الفوترة الإلكترونية — جوفوترة)
 
 Customer invoices are sent to the national e-invoicing system of the Income and Sales Tax Department, and the QR code it returns is printed on the tax invoice. Manager and accountant only.

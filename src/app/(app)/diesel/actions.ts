@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { FUEL_WRITERS } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { parseFillup } from "@/lib/fuel";
+import { bankAccountFor } from "@/lib/bank";
 import { afterFileSaved, attachFile, removeFile } from "@/lib/file-access";
 import { describeDbError } from "@/lib/master-data-parse";
 
@@ -53,6 +54,8 @@ export async function saveOfficeFillup(id: string | null, _prev: FillupFormState
     currency: v.currency,
     fx_rate,
     payment_method: v.payment_method,
+    // Paid by card: from the bank the form names (empty: the main account).
+    bank_account_id: bankAccountFor(v.payment_method, fromForm(formData)("bank_account_id")),
     notes: v.notes,
     voucher_no: v.voucher_no,
     notice_no: v.notice_no,

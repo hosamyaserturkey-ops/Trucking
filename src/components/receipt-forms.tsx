@@ -6,12 +6,25 @@ import type { ReceiptFormState } from "@/app/(app)/receipts/actions";
 import { CHEQUE_STATUS, RECEIPT_METHOD } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { BankAccountField, type BankOption } from "@/components/bank-account-field";
 
 type Option = { id: string; label: string };
 type Action = (prev: ReceiptFormState, formData: FormData) => Promise<ReceiptFormState>;
 
 /** A payment from a customer. Cheques ask for their number, bank and due date. */
-export function ReceiptForm({ action, clients, today, clientId }: { action: Action; clients: Option[]; today: string; clientId?: string }) {
+export function ReceiptForm({
+  action,
+  clients,
+  today,
+  clientId,
+  bankAccounts = [],
+}: {
+  action: Action;
+  clients: Option[];
+  today: string;
+  clientId?: string;
+  bankAccounts?: BankOption[];
+}) {
   const [state, formAction, pending] = useActionState(action, { error: null });
   const [method, setMethod] = useState("cash");
   // A new key after each success clears the inputs.
@@ -58,10 +71,14 @@ export function ReceiptForm({ action, clients, today, clientId }: { action: Acti
         </div>
       </fieldset>
       {method === "bank" ? (
-        <Field label="رقم الحوالة / الإشعار" htmlFor="rc_ref">
-          <Input id="rc_ref" name="reference_no" dir="ltr" />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <BankAccountField accounts={bankAccounts} id="rc_bank" label="وصلت إلى الحساب البنكي" />
+          <Field label="رقم الحوالة / الإشعار" htmlFor="rc_ref">
+            <Input id="rc_ref" name="reference_no" dir="ltr" />
+          </Field>
+        </div>
       ) : null}
+      {method === "cheque" ? <BankAccountField accounts={bankAccounts} id="rc_bank" label="يُودع ويُحصّل في الحساب البنكي" /> : null}
       {method === "cheque" ? (
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="رقم الشيك" htmlFor="rc_cheque_no">

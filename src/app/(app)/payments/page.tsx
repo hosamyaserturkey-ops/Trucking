@@ -4,6 +4,7 @@ import { Printer } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { todayIso } from "@/lib/date-range";
 import { statementFilter } from "@/lib/ledger";
 import { formatMoney, sumMinor } from "@/lib/money";
@@ -64,6 +65,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const byMethod = (m: string) => sumMinor(rows.filter((r) => r.method === m && r.cheque_status !== "bounced").map((r) => r.amount_minor));
   const dueSoon = cheques.filter((c) => (c.cheque_due_date ?? "") <= today).length;
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <PageHeader
@@ -79,7 +81,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <Card>
           <CardHeader title="دفعة جديدة لمورد" subtitle="تُرحّل تلقائياً: مدين حساب المورد، دائن الصندوق أو البنك أو الشيكات المؤجلة" />
           <CardBody>
-            <SupplierPaymentForm action={saveSupplierPayment} suppliers={suppliers} today={today} supplierId={supplier || undefined} />
+            <SupplierPaymentForm bankAccounts={bankAccounts} action={saveSupplierPayment} suppliers={suppliers} today={today} supplierId={supplier || undefined} />
           </CardBody>
         </Card>
 

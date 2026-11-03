@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { FUEL_WRITERS } from "@/lib/roles";
 import { todayIso } from "@/lib/date-range";
 import { nowTime } from "@/lib/fuel";
@@ -19,6 +20,7 @@ export default async function NewFillupPage({ searchParams }: { searchParams: Pr
   const [options, lastPrices] = await Promise.all([loadOfficeOptions(), loadLastFuelPrices()]);
   const t = options.trucks.find((x) => x.id === truck);
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/diesel" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -29,6 +31,7 @@ export default async function NewFillupPage({ searchParams }: { searchParams: Pr
       <Card>
         <CardBody>
           <OfficeFillupForm
+            bankAccounts={bankAccounts}
             options={options}
             lastPrices={lastPrices}
             today={todayIso()}

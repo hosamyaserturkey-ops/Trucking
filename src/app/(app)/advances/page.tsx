@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { canSeeFinancials, STAFF_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { todayIso } from "@/lib/date-range";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatInt } from "@/lib/format";
@@ -36,6 +37,7 @@ export default async function AdvancesPage() {
   const pendingCount = rows.reduce((s, r) => s + (r.pending_count ?? 0), 0);
   const unpriced = rows.reduce((s, r) => s + (r.unpriced_loads ?? 0), 0);
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <PageHeader title="العهد وحسابات السائقين" subtitle="رصيد كل سائق منذ آخر تسوية: العهد عليه، والمصاريف التي دفعها وأجور نقلاته له (بالدينار)" />
@@ -109,6 +111,7 @@ export default async function AdvancesPage() {
             <CardHeader title="صرف عهدة" subtitle="لربط العهدة برحلة افتح صفحة السائق" />
             <CardBody>
               <AdvanceForm
+                bankAccounts={bankAccounts}
                 action={issueAdvance}
                 today={todayIso()}
                 rates={rates}

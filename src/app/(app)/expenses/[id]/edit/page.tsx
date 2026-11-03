@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { todayIso } from "@/lib/date-range";
 import { formatMoney } from "@/lib/money";
 import { EXPENSE_STATUS } from "@/lib/labels";
@@ -29,7 +30,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
   const { data: e } = await supabase
     .from("expenses")
     .select(
-      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, reference_no, voucher_no, customs_declaration_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at, is_load_pay",
+      "id, cost_scope, truck_id, trip_id, driver_id, category_id, supplier_id, description, expense_date, currency, fx_rate, amount_minor, payment_method, bank_account_id, reference_no, voucher_no, customs_declaration_no, notice_no, notes, receipt_path, status, settlement_id, reviewed_at, is_load_pay",
     )
     .eq("id", id)
     .maybeSingle();
@@ -58,6 +59,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
       </>
     );
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/expenses" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -71,6 +73,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
         ) : (
           <CardBody className="flex flex-col gap-6">
             <OfficeExpenseForm
+              bankAccounts={bankAccounts}
               recordId={e.id}
               options={await loadOfficeOptions()}
               today={todayIso()}
@@ -87,6 +90,7 @@ export default async function EditOfficeExpensePage({ params }: { params: Promis
                 fx_rate: String(e.fx_rate),
                 amount: formatMoney(e.amount_minor, e.currency, { withCurrency: false }),
                 payment_method: e.payment_method,
+                bank_account_id: e.bank_account_id,
                 reference_no: e.reference_no,
                 voucher_no: e.voucher_no,
                 customs_declaration_no: e.customs_declaration_no,

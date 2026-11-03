@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Printer } from "lucide-react";
 import { requireRole } from "@/lib/auth";
+import { loadBankAccounts } from "@/lib/bank-accounts";
 import { FINANCE_ROLES } from "@/lib/roles";
 import { todayIso } from "@/lib/date-range";
 import { filterQuery, statementFilter } from "@/lib/ledger";
@@ -84,6 +85,7 @@ export default async function ClientStatementPage({
   const pickedPay = picked?.invoiceId ? pay.get(picked.invoiceId) : undefined;
   const period = `من ${formatDate(f.from)} إلى ${formatDate(f.to)}`;
 
+  const bankAccounts = await loadBankAccounts();
   return (
     <>
       <Link href="/receivables" className="mb-3 flex w-fit items-center gap-1 text-sm text-muted hover:text-text">
@@ -487,7 +489,7 @@ export default async function ClientStatementPage({
         <Card>
           <CardHeader title="قبض دفعة من هذا الزبون" />
           <CardBody>
-            <ReceiptForm action={saveReceipt} clients={[{ id: st.client.id, label: st.client.name }]} today={todayIso()} clientId={st.client.id} />
+            <ReceiptForm bankAccounts={bankAccounts} action={saveReceipt} clients={[{ id: st.client.id, label: st.client.name }]} today={todayIso()} clientId={st.client.id} />
           </CardBody>
         </Card>
       </div>

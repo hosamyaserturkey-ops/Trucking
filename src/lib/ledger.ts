@@ -20,6 +20,7 @@ export const JOURNAL_SOURCE: Record<string, string> = {
   opening: "أرصدة افتتاحية",
   work_order: "أمر صيانة",
   bank_line: "من كشف البنك",
+  bank_movement: "حركة بنكية",
   depreciation: "استهلاك",
 };
 

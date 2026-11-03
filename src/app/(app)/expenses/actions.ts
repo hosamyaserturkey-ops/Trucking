@@ -7,6 +7,7 @@ import { FINANCE_ROLES } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { parseOfficeExpense } from "@/lib/expense-parse";
+import { bankAccountFor } from "@/lib/bank";
 import { afterFileSaved, attachFile, removeFile } from "@/lib/file-access";
 import { describeDbError } from "@/lib/master-data-parse";
 
@@ -33,7 +34,9 @@ export async function saveOfficeExpense(id: string | null, _prev: OfficeExpenseS
     allowedCategoryIds: (categories ?? []).map((c) => c.id),
   });
   if (!parsed.ok) return { error: parsed.error };
-  const { receipt_upload, ...row } = parsed.values;
+  const { receipt_upload, ...rest } = parsed.values;
+  // Paid by bank or cheque: from the bank the form names (empty: the main account).
+  const row = { ...rest, bank_account_id: bankAccountFor(rest.payment_method, fromForm(formData)("bank_account_id")) };
 
   let receipt_path: string | null = null;
   if (receipt_upload) {
