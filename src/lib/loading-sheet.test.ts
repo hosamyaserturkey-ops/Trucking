@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLoadForm, sheetTotals } from "./loading-sheet";
+import { claimStatus, claimTotals, parseLoadForm, sheetTotals } from "./loading-sheet";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -71,5 +71,45 @@ describe("sheetTotals", () => {
         { cargo_weight_tons: 24.25, freight_base_minor: 150_000 },
       ]),
     ).toEqual({ loads: 3, tons: 56.75, freightBaseMinor: 420_500 });
+  });
+});
+
+describe("claimStatus", () => {
+  const load = { status: "completed", client_id: D, is_empty_return: false, invoice_id: null };
+
+  it("is claimed (green) once the load is on an invoice", () => {
+    expect(claimStatus({ ...load, invoice_id: A })).toBe("claimed");
+  });
+
+  it("is not claimed (red) while a finished customer load has no invoice", () => {
+    expect(claimStatus(load)).toBe("unclaimed");
+  });
+
+  it("goes back to not claimed when the invoice is cancelled (invoice_id cleared)", () => {
+    expect(claimStatus({ ...load, invoice_id: null })).toBe("unclaimed");
+  });
+
+  it("has no claim status for loads that can't be claimed yet or at all", () => {
+    expect(claimStatus({ ...load, status: "planned" })).toBeNull();
+    expect(claimStatus({ ...load, status: "in_progress" })).toBeNull();
+    expect(claimStatus({ ...load, status: "cancelled" })).toBeNull();
+    expect(claimStatus({ ...load, is_empty_return: true, client_id: null })).toBeNull();
+    expect(claimStatus({ ...load, client_id: null })).toBeNull();
+  });
+});
+
+describe("claimTotals", () => {
+  it("counts loads and freight on each side and skips loads with no claim status", () => {
+    expect(
+      claimTotals([
+        { claim: "claimed", freight_base_minor: 180_000 },
+        { claim: "unclaimed", freight_base_minor: 90_500 },
+        { claim: "unclaimed", freight_base_minor: 0 },
+        { claim: null, freight_base_minor: 50_000 },
+      ]),
+    ).toEqual({
+      claimed: { loads: 1, freightBaseMinor: 180_000 },
+      unclaimed: { loads: 2, freightBaseMinor: 90_500 },
+    });
   });
 });

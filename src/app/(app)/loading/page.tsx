@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/date-range";
 import { loadTripOptions } from "@/lib/trip-options";
 import { loadSheetRows, sheetFilter } from "@/lib/loading-data";
-import { sheetTotals } from "@/lib/loading-sheet";
+import { claimTotals, sheetTotals } from "@/lib/loading-sheet";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDecimal, formatInt } from "@/lib/format";
 import { saveLoad, deleteLoad } from "./actions";
@@ -18,6 +18,7 @@ import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { LoadForm } from "@/components/load-form";
 import { DeleteLoadButton } from "@/components/delete-load-button";
+import { CLAIM_LABEL, CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
 
 export const metadata: Metadata = { title: "كشف التحميل اليومي" };
 
@@ -51,6 +52,7 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
     supabase.from("clients").select("id, name").order("name"),
   ]);
   const totals = sheetTotals(rows.map((r) => ({ cargo_weight_tons: r.tons, freight_base_minor: r.freightBaseMinor })));
+  const claims = claimTotals(rows.map((r) => ({ claim: r.claim, freight_base_minor: r.freightBaseMinor })));
   const printQuery = new URLSearchParams(
     Object.entries({ from: f.from, to: f.to, truck: f.truck, client: f.client }).filter(([, v]) => v),
   );
@@ -152,10 +154,24 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
           <Stat label="الأطنان" value={formatDecimal(totals.tons)} />
           <Stat label="الأجرة (دينار)" value={formatMoney(totals.freightBaseMinor, "JOD", { fractionDigits: 0 })} />
           <Stat label="الشاحنات" value={formatInt(new Set(rows.map((r) => r.truckCode)).size)} />
+          <Stat
+            label={CLAIM_LABEL.claimed}
+            value={formatInt(claims.claimed.loads)}
+            hint={`${formatMoney(claims.claimed.freightBaseMinor, "JOD", { fractionDigits: 0 })} · مفوترة على الزبون`}
+            tone="success"
+          />
+          <Stat
+            label={CLAIM_LABEL.unclaimed}
+            value={formatInt(claims.unclaimed.loads)}
+            hint={`${formatMoney(claims.unclaimed.freightBaseMinor, "JOD", { fractionDigits: 0 })} · لم تُفوتر بعد`}
+            tone={claims.unclaimed.loads ? "danger" : "neutral"}
+          />
         </StatGrid>
 
         <Card>
-          <CardHeader title="النقلات" subtitle={finance ? "الأجرة تُحسب ضمن إيراد الشاحنة" : undefined} action={<ExportButton tableId="loading-table" file="loading-sheet" title={`كشف التحميل ${oneDay ? formatDate(f.from) : `من ${formatDate(f.from)} إلى ${formatDate(f.to)}`}`} />} />
+          <CardHeader
+            title="النقلات"
+            subtitle={`الأخضر: تمت المطالبة (مفوترة) · الأحمر: لم تتم المطالبة بعد${finance ? " · الأجرة تُحسب ضمن إيراد الشاحنة" : ""}`} action={<ExportButton tableId="loading-table" file="loading-sheet" title={`كشف التحميل ${oneDay ? formatDate(f.from) : `من ${formatDate(f.from)} إلى ${formatDate(f.to)}`}`} />} />
           {rows.length === 0 ? (
             <EmptyState>لا توجد نقلات {oneDay ? "في هذا اليوم" : "في هذه الفترة"}.</EmptyState>
           ) : (
@@ -173,6 +189,7 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                   <Th className="text-end">الوزن</Th>
                   <Th className="text-end">الأجرة</Th>
                   <Th>مستند الزبون</Th>
+                  <Th>المطالبة</Th>
                   {canWrite ? (
                     <Th>
                       <span className="sr-only">إجراءات</span>
@@ -182,7 +199,7 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <Tr key={r.id}>
+                  <Tr key={r.id} tone={r.claim ? CLAIM_TONE[r.claim] : undefined}>
                     <Td className="num whitespace-nowrap font-medium">
                       <span dir="ltr">{r.ref ?? "—"}</span>
                     </Td>
@@ -198,17 +215,14 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                     <Td className="num whitespace-nowrap">
                       <span dir="ltr">{r.docNo ?? "—"}</span>
                     </Td>
+                    <Td className="whitespace-nowrap">
+                      <ClaimStatusText claim={r.claim} invoiceId={r.invoiceId} invoiceNo={r.invoiceNo} />
+                    </Td>
                     {canWrite ? (
                       <Td className="whitespace-nowrap">
                         {r.invoiceId ? (
                           // Invoiced loads are locked until the invoice is cancelled.
-                          r.invoiceNo ? (
-                            <Link href={`/invoices/${r.invoiceId}`} className="text-xs text-muted hover:underline">
-                              فاتورة {r.invoiceNo}
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-muted">مفوترة</span>
-                          )
+                          <span className="text-xs text-muted">مقفلة</span>
                         ) : (
                           <>
                             <Link href={`/loading/${r.id}/edit`} className="me-3 text-xs text-primary hover:underline">
@@ -230,7 +244,7 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                   </td>
                   <td className={`${FOOT} num text-end whitespace-nowrap`}>{formatDecimal(totals.tons)}</td>
                   <td className={`${FOOT} num text-end whitespace-nowrap`}>{formatMoney(totals.freightBaseMinor, "JOD")}</td>
-                  <td className={FOOT} colSpan={canWrite ? 2 : 1} />
+                  <td className={FOOT} colSpan={canWrite ? 3 : 2} />
                 </tr>
               </tfoot>
             </Table>

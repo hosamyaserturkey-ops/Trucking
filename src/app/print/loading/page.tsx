@@ -7,10 +7,14 @@ import { sheetTotals } from "@/lib/loading-sheet";
 import { formatMoney } from "@/lib/money";
 import { formatDate, formatDateTime, formatDecimal, formatInt } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
+import { CLAIM_LABEL } from "@/components/claim-status";
 
 export const metadata: Metadata = { title: "كشف التحميل" };
 
 const CELL = "border border-border px-2 py-1";
+// Green once the customer is claimed (invoiced), red until then.
+const CLAIM_ROW = { claimed: "bg-success-soft", unclaimed: "bg-danger-soft" } as const;
+const CLAIM_TEXT = { claimed: "text-success", unclaimed: "text-danger" } as const;
 
 type SearchParams = Promise<{ date?: string; from?: string; to?: string; truck?: string; client?: string }>;
 
@@ -30,7 +34,7 @@ export default async function LoadingSheetPrintPage({ searchParams }: { searchPa
 
   return (
     <main className="mx-auto max-w-[297mm] bg-surface p-6 text-[12px] leading-relaxed print:max-w-none print:p-0">
-      <style>{`@page { size: A4 landscape; margin: 10mm; } @media print { thead { display: table-header-group; } tr { break-inside: avoid; } }`}</style>
+      <style>{`@page { size: A4 landscape; margin: 10mm; } @media print { thead { display: table-header-group; } tr { break-inside: avoid; } } tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }`}</style>
       <div className="mb-4 flex justify-end print:hidden">
         <PrintButton />
       </div>
@@ -79,11 +83,12 @@ export default async function LoadingSheetPrintPage({ searchParams }: { searchPa
               <th className={`${CELL} text-end`}>الوزن (طن)</th>
               <th className={`${CELL} text-end`}>الأجرة</th>
               <th className={`${CELL} text-start`}>مستند الزبون</th>
+              <th className={`${CELL} text-start`}>المطالبة</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.id}>
+              <tr key={r.id} className={r.claim ? CLAIM_ROW[r.claim] : ""}>
                 <td className={`${CELL} num`}>{i + 1}</td>
                 <td className={`${CELL} num whitespace-nowrap`}>
                   <span dir="ltr">{r.ref ?? "—"}</span>
@@ -100,6 +105,14 @@ export default async function LoadingSheetPrintPage({ searchParams }: { searchPa
                 <td className={`${CELL} num`}>
                   <span dir="ltr">{r.docNo ?? ""}</span>
                 </td>
+                <td className={`${CELL} whitespace-nowrap font-semibold ${r.claim ? CLAIM_TEXT[r.claim] : ""}`}>
+                  {r.claim ? CLAIM_LABEL[r.claim] : "—"}
+                  {r.invoiceNo ? (
+                    <span className="font-normal">
+                      {" "}· فاتورة <span className="num">{r.invoiceNo}</span>
+                    </span>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -111,7 +124,7 @@ export default async function LoadingSheetPrintPage({ searchParams }: { searchPa
               <td className={CELL} colSpan={6} />
               <td className={`${CELL} num text-end`}>{formatDecimal(totals.tons)}</td>
               <td className={`${CELL} num text-end whitespace-nowrap`}>{formatMoney(totals.freightBaseMinor, "JOD")}</td>
-              <td className={CELL} />
+              <td className={CELL} colSpan={2} />
             </tr>
           </tfoot>
         </table>

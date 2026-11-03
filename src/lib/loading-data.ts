@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIso } from "@/lib/date-range";
+import { claimStatus, type ClaimStatus } from "@/lib/loading-sheet";
 
 export type SheetFilter = { from: string; to: string; truck: string; client: string };
 
@@ -22,6 +23,8 @@ export type SheetRow = {
   /** Set once the load is on an invoice; it can't be edited or deleted then. */
   invoiceId: string | null;
   invoiceNo: number | null; // only finance roles can see invoices
+  /** Green once the customer is claimed (the load is on an invoice), red until then. */
+  claim: ClaimStatus | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,7 +56,7 @@ export async function loadSheetRows(f: SheetFilter): Promise<SheetRow[]> {
   let query = supabase
     .from("trips")
     .select(
-      "id, client_ref, start_date, cargo_description, cargo_weight_tons, currency, freight_minor, freight_base_minor, client_doc_no, notes, invoice_id, invoice:invoices!trips_invoice_id_fkey(invoice_no), truck:trucks(code), driver:drivers(full_name), client:clients(name), from_loc:locations!trips_from_location_id_fkey(name), to_loc:locations!trips_to_location_id_fkey(name)",
+      "id, client_ref, start_date, status, client_id, is_empty_return, cargo_description, cargo_weight_tons, currency, freight_minor, freight_base_minor, client_doc_no, notes, invoice_id, invoice:invoices!trips_invoice_id_fkey(invoice_no), truck:trucks(code), driver:drivers(full_name), client:clients(name), from_loc:locations!trips_from_location_id_fkey(name), to_loc:locations!trips_to_location_id_fkey(name)",
     )
     .eq("entry_source", "sheet")
     .gte("start_date", f.from)
@@ -82,5 +85,6 @@ export async function loadSheetRows(f: SheetFilter): Promise<SheetRow[]> {
     notes: r.notes,
     invoiceId: r.invoice_id,
     invoiceNo: (r.invoice as { invoice_no: number } | null)?.invoice_no ?? null,
+    claim: claimStatus(r),
   }));
 }
