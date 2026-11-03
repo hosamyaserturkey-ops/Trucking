@@ -54,7 +54,7 @@ update public.profiles set role = 'manager' where user_id = '00000000-0000-4000-
 update public.profiles set role = 'accountant' where user_id = '00000000-0000-4000-8000-0000000000f2';
 update public.profiles set role = 'dispatcher' where user_id = '00000000-0000-4000-8000-0000000000f3';
 
--- Two customers with finished loads; four old loads of the first, one of the second.
+-- Two customers with finished loads; the first one's three oldest open loads, one of the second's.
 create temp table ix as
 with a as (
   select client_id from public.trips
@@ -69,7 +69,7 @@ update ix set
   loads = (select array_agg(id order by start_date) from (
              select id, start_date from public.trips
              where client_id = ix.client_a and status = 'completed' and not is_empty_return and invoice_id is null
-             order by start_date limit 4) s),
+             order by start_date limit 3) s),
   other_load = (select id from public.trips
                 where client_id = ix.client_b and status = 'completed' and not is_empty_return and invoice_id is null
                 order by start_date limit 1),
@@ -259,10 +259,21 @@ select pg_temp.check(
   = (select balance_minor from public.client_balance_v where client_id = (select client_a from ix)),
   'the statement adds up to the balance');
 
--- Overdue: an old invoice past its due date.
+-- Overdue: an invoice past its due date. Its load is the test's own, dated
+-- longer ago than the customer's payment terms (plus a margin), so the check
+-- does not depend on the seed's dates or on today's date.
+insert into public.trips (entry_source, status, truck_id, driver_id, client_id, from_location_id, to_location_id,
+                          start_date, currency, freight_minor, notes)
+select 'sheet', 'completed', x.truck_id, x.driver_id, ix.client_a, x.from_location_id, x.to_location_id,
+       app.today() - (c.payment_terms_days + 30), 'JOD', 900000, 'overdue test load'
+from ix
+join public.clients c on c.id = ix.client_a
+join public.trips x on x.id = ix.loads[1];
+create temp table old_load as select id, start_date from public.trips where notes = 'overdue test load';
+grant select on old_load to authenticated;
 create temp table inv_old as
-select pg_temp.as_user_value('00000000-0000-4000-8000-0000000000f2', pg_temp.invoice('(select loads[4:4] from ix)',
-  format('%L::date', (select start_date + 1 from public.trips where id = (select loads[4] from ix)))))::uuid as id;
+select pg_temp.as_user_value('00000000-0000-4000-8000-0000000000f2', pg_temp.invoice('(select array[id] from old_load)',
+  format('%L::date', (select start_date + 1 from old_load))))::uuid as id;
 select pg_temp.check(
   (select due_date < current_date from public.invoices where id = (select id from inv_old)),
   'an invoice dated months ago is past due (setup)');
