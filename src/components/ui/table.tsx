@@ -14,7 +14,7 @@ export function Table({ children, className = "", id }: { children: ReactNode; c
 export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
   return (
     <th
-      className={`whitespace-nowrap border-b border-border bg-surface-2 px-3 py-2 text-start text-xs font-semibold text-muted ${className}`}
+      className={`whitespace-nowrap border-b-[1.5px] border-rule px-2.5 pb-2 pt-2.5 text-start text-xs font-semibold text-muted ${className}`}
     >
       {children}
     </th>
@@ -22,7 +22,7 @@ export function Th({ children, className = "" }: { children?: ReactNode; classNa
 }
 
 export function Td({ children, className = "" }: { children?: ReactNode; className?: string }) {
-  return <td className={`border-b border-border px-3 py-2 align-top ${className}`}>{children}</td>;
+  return <td className={`border-b border-border px-2.5 py-2 align-top ${className}`}>{children}</td>;
 }
 
 // A tinted row keeps its colour on hover, so the colour is never lost under the pointer.

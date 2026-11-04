@@ -14,6 +14,7 @@ import { saveLoad, deleteLoad } from "./actions";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
+import { Plate } from "@/components/ui/plate";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { LoadForm } from "@/components/load-form";
@@ -204,15 +205,17 @@ export default async function LoadingSheetPage({ searchParams }: { searchParams:
                     <Td className="num whitespace-nowrap font-medium">
                       {finance && r.ref ? (
                         // The reference leads to the customer's statement, opened at this load.
-                        <Link href={refHref(r.ref)} className="hover:underline" dir="ltr" title="كشف حساب الزبون عند هذه النقلة">
-                          {r.ref}
+                        <Link href={refHref(r.ref)} title="كشف حساب الزبون عند هذه النقلة">
+                          <Plate>{r.ref}</Plate>
                         </Link>
                       ) : (
-                        <span dir="ltr">{r.ref ?? "—"}</span>
+                        <Plate>{r.ref}</Plate>
                       )}
                     </Td>
                     {oneDay ? null : <Td className="num whitespace-nowrap">{formatDate(r.date)}</Td>}
-                    <Td className="num whitespace-nowrap">{r.truckCode}</Td>
+                    <Td className="whitespace-nowrap">
+                      <Plate>{r.truckCode}</Plate>
+                    </Td>
                     <Td className="whitespace-nowrap">{r.driver ?? "—"}</Td>
                     <Td className="whitespace-nowrap">{r.client ?? "—"}</Td>
                     <Td className="whitespace-nowrap">{r.from ?? "—"}</Td>
