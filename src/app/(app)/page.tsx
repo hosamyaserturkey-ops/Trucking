@@ -11,6 +11,7 @@ import { formatDate, formatDecimal, formatInt } from "@/lib/format";
 import { DOC_TYPE, EXPIRY_BAND, SERVICE_STATUS, TRUCK_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
+import { Plate } from "@/components/ui/plate";
 import { Stat, StatGrid } from "@/components/ui/stat";
 
 export const metadata: Metadata = { title: "الأسطول" };
@@ -131,13 +132,13 @@ export default async function FleetPage() {
                   <li key={t.truck_id}>
                     <Link
                       href={`/trucks/${t.truck_id}`}
-                      className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-primary"
+                      className="block rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="flex items-baseline gap-2 font-bold">
-                            <span className="num">{t.code}</span>
-                            <span className="num text-sm font-medium text-muted">{t.plate_number}</span>
+                          <p className="flex items-center gap-2">
+                            <Plate size="md">{t.code}</Plate>
+                            <span className="num text-sm text-muted">{t.plate_number}</span>
                           </p>
                           <p className="mt-0.5 truncate text-sm text-muted">
                             {[t.make, t.model, t.year].filter(Boolean).join(" ")}
@@ -194,7 +195,7 @@ export default async function FleetPage() {
                       className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2"
                     >
                       <span className="min-w-0">
-                        <span className="num font-semibold">{a.truck_code}</span> <span>{a.driver_name ?? ""}</span>
+                        <Plate>{a.truck_code}</Plate> <span>{a.driver_name ?? ""}</span>
                         <span className="block text-xs text-muted">{formatDate(a.filled_on)}</span>
                       </span>
                       <span className="num text-xs whitespace-nowrap text-danger">
@@ -230,7 +231,7 @@ export default async function FleetPage() {
                         className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm hover:bg-surface-2"
                       >
                         <span className="min-w-0">
-                          <span className="num font-semibold">{d.truck_code}</span> <span>{DOC_TYPE[d.doc_type ?? "other"]}</span>
+                          <Plate>{d.truck_code}</Plate> <span>{DOC_TYPE[d.doc_type ?? "other"]}</span>
                           <span className="block text-xs text-muted">{formatDate(d.expiry_date)}</span>
                         </span>
                         <Badge tone={band.tone}>

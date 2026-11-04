@@ -3,6 +3,8 @@ import "@fontsource/ibm-plex-sans-arabic/400.css";
 import "@fontsource/ibm-plex-sans-arabic/500.css";
 import "@fontsource/ibm-plex-sans-arabic/600.css";
 import "@fontsource/ibm-plex-sans-arabic/700.css";
+import "@fontsource/noto-kufi-arabic/600.css";
+import "@fontsource/noto-kufi-arabic/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0d6b5c",
+  themeColor: "#0b6555",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

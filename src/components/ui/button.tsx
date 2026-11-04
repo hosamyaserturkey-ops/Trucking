@@ -10,7 +10,7 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
 
 export function buttonClass(variant: Variant = "primary", extra = "") {
   return `${BASE} ${VARIANTS[variant]} ${extra}`;

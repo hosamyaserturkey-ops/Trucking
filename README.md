@@ -314,6 +314,17 @@ Customer invoices are sent to the national e-invoicing system of the Income and 
 - **Fill-ups must be plausible:** liters no more than the truck's tank (for fill-ups in liters), and the odometer between the truck's earlier and later fill-ups.
 - **A fill-up's cost is always quantity × price per unit**; the database recomputes it on every write.
 
+## Look and layout
+
+- **Colour:** concrete grey background, white surfaces, ledger-ink text, the petrol green for actions, and hi-vis yellow only for plates and counts that need action. Green and red mean money status (claimed or paid, unclaimed or overdue). Dark mode follows the device. The tokens are in `src/app/globals.css`.
+- **Type:** titles in Noto Kufi Arabic; body and tables in IBM Plex Sans Arabic with tabular figures.
+- **Plates:** truck codes and load references show as small number plates (`src/components/ui/plate.tsx`, the `.plate` style).
+- **Menu:** sections (daily work, operations, customers, suppliers and banks, accounts, master data, admin) set on each item in `NAV_ITEMS` (`src/lib/roles.ts`). Master data and admin stay folded unless the current page is in them. The frame is `src/components/app-shell.tsx`.
+- **Shared components (`src/components/ui`):**
+  - page headers sit on an ink rule;
+  - summary numbers sit in one band whose columns follow how many it holds;
+  - table headers sit on an ink rule.
+
 ## Running it
 
 ```bash

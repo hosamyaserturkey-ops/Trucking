@@ -11,6 +11,7 @@ import { claimStatus } from "@/lib/loading-sheet";
 import { formatMoney } from "@/lib/money";
 import { formatDate } from "@/lib/format";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
+import { Plate } from "@/components/ui/plate";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { RefSearch } from "@/components/ref-search";
 import { CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
@@ -67,7 +68,7 @@ export default async function RefLookupPage({ searchParams }: { searchParams: Pr
                   <Tr key={l.id} tone={claim ? CLAIM_TONE[claim] : undefined}>
                     <Td className="num whitespace-nowrap">
                       <Link href={statementHref(l.clientId, l.id, l.date)} className="font-semibold text-primary hover:underline" dir="ltr">
-                        {l.ref ?? "—"}
+                        <Plate>{l.ref}</Plate>
                       </Link>
                     </Td>
                     <Td className="num whitespace-nowrap">{formatDate(l.date)}</Td>

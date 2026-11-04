@@ -12,6 +12,7 @@ import { TRIP_STATUS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, LinkButton } from "@/components/ui/button";
 import { Card, EmptyState, PageHeader } from "@/components/ui/card";
+import { Plate } from "@/components/ui/plate";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { CLAIM_TONE, ClaimStatusText } from "@/components/claim-status";
@@ -173,18 +174,20 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
                       </Link>
                       {ref?.client_ref ? (
                         finance ? (
-                          <Link href={refHref(ref.client_ref)} className="num block text-xs text-muted hover:underline" dir="ltr" title="كشف حساب الزبون عند هذه النقلة">
-                            {ref.client_ref}
+                          <Link href={refHref(ref.client_ref)} className="mt-1 block" title="كشف حساب الزبون عند هذه النقلة">
+                            <Plate>{ref.client_ref}</Plate>
                           </Link>
                         ) : (
-                          <span className="num block text-xs text-muted" dir="ltr">
-                            {ref.client_ref}
+                          <span className="mt-1 block">
+                            <Plate>{ref.client_ref}</Plate>
                           </span>
                         )
                       ) : null}
                     </Td>
                     <Td className="num whitespace-nowrap">{formatDate(t.start_date)}</Td>
-                    <Td className="num whitespace-nowrap">{codes.get(t.truck_id ?? "") ?? "—"}</Td>
+                    <Td className="whitespace-nowrap">
+                      <Plate>{codes.get(t.truck_id ?? "")}</Plate>
+                    </Td>
                     <Td className="whitespace-nowrap">{t.driver_name ?? "—"}</Td>
                     <Td className="whitespace-nowrap">
                       {t.from_name} ← {t.to_name}

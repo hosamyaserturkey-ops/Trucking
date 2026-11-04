@@ -11,6 +11,9 @@ importers:
       '@fontsource/ibm-plex-sans-arabic':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/noto-kufi-arabic':
+        specifier: 5.3.0
+        version: 5.3.0
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.118.0)
@@ -596,6 +599,9 @@ packages:
 
   '@fontsource/ibm-plex-sans-arabic@5.3.0':
     resolution: {integrity: sha512-ZZ4g+JDgQY0NqSh4o0MNWU1sHQmtcee1g++aKAwyJvZxnT5y51JXsN1cIXnaQaMd40dcbK6QFYa+Z1LbaiNuqA==}
+
+  '@fontsource/noto-kufi-arabic@5.3.0':
+    resolution: {integrity: sha512-3iSq8i00+omfUXFXuCUrNDz1ghck3HDXul3p3iAfY0Vd9NZqI1NcUNoAVPiUW+BaEQGYQSi+r0R3d1eoNK3OBg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4403,6 +4409,8 @@ snapshots:
       levn: 0.4.1
 
   '@fontsource/ibm-plex-sans-arabic@5.3.0': {}
+
+  '@fontsource/noto-kufi-arabic@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

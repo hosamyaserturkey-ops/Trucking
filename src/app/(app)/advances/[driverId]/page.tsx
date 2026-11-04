@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { LinkButton, buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
+import { Plate } from "@/components/ui/plate";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { AdvanceForm, LoadPayForm, SettleForm } from "@/components/advance-forms";
 import { BalanceText } from "@/components/balance-text";
@@ -296,11 +297,13 @@ export default async function DriverAdvancePage({
                       <Td className="num whitespace-nowrap">{formatDate(l.load_date)}</Td>
                       <Td className="num whitespace-nowrap">
                         <Link href={`/trips/${l.trip_id}`} className="font-medium text-primary hover:underline">
-                          {l.client_ref ? <span dir="ltr">{l.client_ref}</span> : `#${l.trip_no}`}
+                          {l.client_ref ? <Plate>{l.client_ref}</Plate> : `#${l.trip_no}`}
                         </Link>
                         {l.entry_source === "sheet" ? <span className="ms-1 text-xs text-muted">كشف</span> : null}
                       </Td>
-                      <Td className="num whitespace-nowrap">{l.truck_code}</Td>
+                      <Td className="whitespace-nowrap">
+                        <Plate>{l.truck_code}</Plate>
+                      </Td>
                       <Td className="whitespace-nowrap">{l.is_empty_return ? <Badge>عودة فارغة</Badge> : (l.client_name ?? "—")}</Td>
                       <Td>
                         {l.from_name} ← {l.to_name}

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
+import { Plate } from "@/components/ui/plate";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { Amount, Balance, StatementFilters } from "@/components/ledger-bits";
@@ -121,7 +122,7 @@ export default async function ClientStatementPage({
             <CardHeader
               title={
                 <>
-                  النقلة <span className="num" dir="ltr">{picked.ref ?? "—"}</span>
+                  النقلة <Plate size="md">{picked.ref}</Plate>
                 </>
               }
               subtitle="رقم الإشارة يربط النقلة بكشف التحميل وبالفاتورة (المطالبة) وبهذا الكشف"
@@ -136,7 +137,7 @@ export default async function ClientStatementPage({
                 <div>
                   <dt className="text-xs text-muted">الشاحنة والسائق</dt>
                   <dd>
-                    <span className="num">{picked.truckCode ?? "—"}</span> · {picked.driver ?? "—"}
+                    <Plate>{picked.truckCode}</Plate> {picked.driver ?? "—"}
                   </dd>
                 </div>
                 <div>
@@ -334,11 +335,13 @@ export default async function ClientStatementPage({
                   <Tr key={l.id} tone="danger" className={l.id === loadId ? PICKED : ""}>
                     <Td className="num whitespace-nowrap font-medium">
                       <Link href={`/trips/${l.id}`} className="hover:underline" dir="ltr">
-                        {l.ref ?? "—"}
+                        <Plate>{l.ref}</Plate>
                       </Link>
                     </Td>
                     <Td className="num whitespace-nowrap">{formatDate(l.date)}</Td>
-                    <Td className="num whitespace-nowrap">{l.truckCode ?? "—"}</Td>
+                    <Td className="whitespace-nowrap">
+                      <Plate>{l.truckCode}</Plate>
+                    </Td>
                     <Td className="whitespace-nowrap">{l.route}</Td>
                     <Td>{l.cargo ?? "—"}</Td>
                     <Td className="num">
@@ -411,10 +414,10 @@ export default async function ClientStatementPage({
                         <Td className="num whitespace-nowrap ps-6">
                           {l.trip_id ? (
                             <Link href={`/trips/${l.trip_id}`} className="hover:underline" dir="ltr">
-                              {l.client_ref ?? "—"}
+                              <Plate>{l.client_ref}</Plate>
                             </Link>
                           ) : (
-                            <span dir="ltr">{l.client_ref ?? "—"}</span>
+                            <Plate>{l.client_ref}</Plate>
                           )}
                         </Td>
                         <Td className="num whitespace-nowrap">{formatDate(l.load_date)}</Td>
