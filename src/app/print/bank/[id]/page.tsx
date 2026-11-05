@@ -99,7 +99,7 @@ export default async function BankReconciliationPrintPage({ params }: { params: 
       </div>
       <header className="flex items-start justify-between gap-4 border-b-2 border-text pb-3">
         <div>
-          <p className="text-lg font-bold">{company?.company_name ?? "شركة النقل"}</p>
+          <p className="font-display text-lg font-bold">{company?.company_name ?? "شركة النقل"}</p>
           {company?.address ? <p className="text-xs">{company.address}</p> : null}
           {company?.phone ? (
             <p className="text-xs">

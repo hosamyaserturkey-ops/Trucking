@@ -14,6 +14,7 @@ import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "المصاريف" };
 
@@ -209,8 +210,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Sea
                       </Td>
                       <Td className="whitespace-nowrap">
                         {t ? (
-                          <Link href={`/trucks/${t.id}/expenses`} className="num hover:underline">
-                            {t.code}
+                          <Link href={`/trucks/${t.id}/expenses`}>
+                            <Plate>{t.code}</Plate>
                           </Link>
                         ) : (
                           <Badge>عام</Badge>

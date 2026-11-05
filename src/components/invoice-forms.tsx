@@ -6,6 +6,7 @@ import { invoiceTotals } from "@/lib/invoicing";
 import { formatMoney } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/form";
+import { Plate } from "@/components/ui/plate";
 
 type Action = (prev: InvoiceFormState, formData: FormData) => Promise<InvoiceFormState>;
 
@@ -92,9 +93,11 @@ export function InvoiceDraftForm({
                 </td>
                 <td className={`${CELL} num whitespace-nowrap`}>{l.date.split("-").reverse().join("/")}</td>
                 <td className={`${CELL} num whitespace-nowrap`}>
-                  <span dir="ltr">{l.ref ?? "—"}</span>
+                  <Plate>{l.ref}</Plate>
                 </td>
-                <td className={`${CELL} num whitespace-nowrap`}>{l.truck}</td>
+                <td className={`${CELL} whitespace-nowrap`}>
+                  <Plate>{l.truck}</Plate>
+                </td>
                 <td className={`${CELL} whitespace-nowrap`}>{l.route}</td>
                 <td className={CELL}>
                   {l.cargo ?? "—"}

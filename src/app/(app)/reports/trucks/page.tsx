@@ -15,6 +15,7 @@ import { ExportButton } from "@/components/export-button";
 import { PrintButton } from "@/components/print-button";
 import { PnlChart, type PnlPoint } from "@/components/pnl-chart";
 import { Jod, Margin, ReportTabs } from "@/components/report-bits";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "ربح الشاحنات" };
 
@@ -136,8 +137,8 @@ export default async function TruckProfitReportPage({ searchParams }: { searchPa
                 {rows.map((r) => (
                   <Tr key={r.truck_id}>
                     <Td className="whitespace-nowrap">
-                      <Link href={`/trucks/${r.truck_id}?${query}`} className="num font-semibold hover:underline">
-                        {r.code}
+                      <Link href={`/trucks/${r.truck_id}?${query}`}>
+                        <Plate>{r.code}</Plate>
                       </Link>
                       <span className="num ms-2 text-xs text-muted">{trucks.get(r.truck_id)?.plate_number}</span>
                     </Td>
@@ -241,7 +242,9 @@ export default async function TruckProfitReportPage({ searchParams }: { searchPa
                 <tbody>
                   {rows.map((r) => (
                     <Tr key={r.truck_id}>
-                      <Td className="num whitespace-nowrap font-semibold">{r.code}</Td>
+                      <Td className="whitespace-nowrap">
+                        <Plate>{r.code}</Plate>
+                      </Td>
                       {months.map((m) => {
                         const c = cell.get(`${r.truck_id}|${m}`);
                         return (

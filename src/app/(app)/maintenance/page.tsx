@@ -16,6 +16,7 @@ import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "الصيانة" };
 
@@ -124,7 +125,7 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
                   <li key={o.id}>
                     <Link href={`/maintenance/${o.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-surface-2">
                       <span className="min-w-0">
-                        <span className="num font-semibold">{o.truck?.code}</span> <span>{o.description}</span>
+                        <Plate>{o.truck?.code}</Plate> <span>{o.description}</span>
                         <span className="block text-xs text-muted">
                           <span className="num">#{o.wo_no}</span> · {o.workshop?.name ?? "بدون ورشة"} · منذ{" "}
                           <span className="num">{formatInt(daysBetween(o.opened_on, today))}</span> يوم
@@ -269,10 +270,10 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
                           {r.wo_no}
                         </Link>
                       </Td>
-                      <Td className="num whitespace-nowrap">
+                      <Td className="whitespace-nowrap">
                         {r.truck ? (
-                          <Link href={`/maintenance?${query}&truck=${r.truck.id}`} className="hover:underline">
-                            {r.truck.code}
+                          <Link href={`/maintenance?${query}&truck=${r.truck.id}`}>
+                            <Plate>{r.truck.code}</Plate>
                           </Link>
                         ) : null}
                       </Td>

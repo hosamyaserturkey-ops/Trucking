@@ -36,6 +36,7 @@ import {
   WorkOrderNotesForm,
   type ScheduleChoice,
 } from "@/components/work-order-forms";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "أمر صيانة" };
 
@@ -111,8 +112,9 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ id: 
         }
         subtitle={
           <>
-            <Link href={`/trucks/${wo.truck_id}/maintenance`} className="num font-medium hover:underline">
-              {truck?.code} · {truck?.plate_number}
+            <Link href={`/trucks/${wo.truck_id}/maintenance`} className="inline-flex items-center gap-1.5 align-middle hover:underline">
+              <Plate>{truck?.code}</Plate>
+              <span className="num">{truck?.plate_number}</span>
             </Link>{" "}
             · {WORK_ORDER_KIND[wo.kind]} · {wo.description}
           </>

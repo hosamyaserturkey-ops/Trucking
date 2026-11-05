@@ -15,6 +15,7 @@ import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "الديزل" };
 
@@ -288,9 +289,9 @@ export default async function DieselPage({ searchParams }: { searchParams: Searc
                   return (
                     <Tr key={f.id}>
                       <Td className="num whitespace-nowrap">{formatDateTime(f.filled_at)}</Td>
-                      <Td className="num whitespace-nowrap">
-                        <Link href={`/trucks/${f.truck_id}/diesel`} className="hover:underline">
-                          {(f.truck as { code: string } | null)?.code}
+                      <Td className="whitespace-nowrap">
+                        <Link href={`/trucks/${f.truck_id}/diesel`}>
+                          <Plate>{(f.truck as { code: string } | null)?.code}</Plate>
                         </Link>
                       </Td>
                       <Td className="whitespace-nowrap">{(f.driver as { full_name: string } | null)?.full_name ?? "—"}</Td>

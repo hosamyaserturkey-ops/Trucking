@@ -18,6 +18,7 @@ import { CancelInvoiceForm } from "@/components/invoice-forms";
 import { JournalEntryCard } from "@/components/journal-entry-card";
 import { EinvoiceCard } from "@/components/einvoice-card";
 import { refHref } from "@/components/ref-search";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "فاتورة" };
 
@@ -138,8 +139,8 @@ export default async function InvoicePage({
                   <Td className="num whitespace-nowrap">{formatDate(l.load_date)}</Td>
                   <Td className="num whitespace-nowrap">
                     {l.client_ref ? (
-                      <Link href={refHref(l.client_ref)} className="hover:underline" dir="ltr" title="كشف حساب الزبون عند هذه النقلة">
-                        {l.client_ref}
+                      <Link href={refHref(l.client_ref)} title="كشف حساب الزبون عند هذه النقلة">
+                        <Plate>{l.client_ref}</Plate>
                       </Link>
                     ) : (
                       "—"

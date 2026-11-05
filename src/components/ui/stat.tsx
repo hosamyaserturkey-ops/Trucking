@@ -24,7 +24,7 @@ export function Stat({
     <div className="min-w-0 border-b border-e border-border px-4 py-3">
       <p className="text-xs font-medium text-muted">{label}</p>
       <p className={`num mt-0.5 truncate text-lg font-bold sm:text-xl ${VALUE_TONE[tone]}`}>{value}</p>
-      {hint ? <p className="mt-0.5 truncate text-xs text-muted">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-xs leading-relaxed text-muted">{hint}</p> : null}
     </div>
   );
 }

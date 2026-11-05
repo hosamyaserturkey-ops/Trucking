@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExpenseReview, FuelReview } from "@/components/expense-review";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "الموافقات" };
 
@@ -56,8 +57,8 @@ function Who({ j }: { j: Joined }) {
         <>
           {" "}
           ·{" "}
-          <Link href={`/trucks/${j.truck.id}`} className="num hover:underline">
-            {j.truck.code}
+          <Link href={`/trucks/${j.truck.id}`}>
+            <Plate>{j.truck.code}</Plate>
           </Link>
         </>
       ) : null}

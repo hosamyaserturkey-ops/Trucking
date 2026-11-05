@@ -16,6 +16,7 @@ import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { CancelTripButton, OdometerAction } from "@/components/trip-status-actions";
+import { Plate } from "@/components/ui/plate";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,18 +81,14 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             <Badge tone={st.tone}>{st.label}</Badge>
             {trip.is_empty_return ? <Badge>عودة فارغة</Badge> : null}
             {raw.entry_source === "sheet" ? <Badge tone="info">كشف التحميل</Badge> : null}
-            {raw.client_ref ? (
-              <span className="num text-base font-medium text-muted" dir="ltr">
-                {raw.client_ref}
-              </span>
-            ) : null}
+            {raw.client_ref ? <Plate size="md">{raw.client_ref}</Plate> : null}
           </span>
         }
         subtitle={
           <>
             {trip.from_name} ← {trip.to_name} · الشاحنة{" "}
-            <Link href={`/trucks/${trip.truck_id}`} className="num text-primary hover:underline">
-              {truck?.code}
+            <Link href={`/trucks/${trip.truck_id}`} className="align-middle">
+              <Plate>{truck?.code}</Plate>
             </Link>{" "}
             · {trip.driver_name ?? "بدون سائق"}
           </>
