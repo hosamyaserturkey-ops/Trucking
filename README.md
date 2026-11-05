@@ -318,6 +318,8 @@ Customer invoices are sent to the national e-invoicing system of the Income and 
 
 - **Colour:** concrete grey background, white surfaces, ledger-ink text, the petrol green for actions, and hi-vis yellow only for plates and counts that need action. Green and red mean money status (claimed or paid, unclaimed or overdue). Dark mode follows the device. The tokens are in `src/app/globals.css`.
 - **Type:** titles in Noto Kufi Arabic; body and tables in IBM Plex Sans Arabic with tabular figures.
+- **Icon:** a white truck heading left (forward in RTL) on a hi-vis yellow road, on the petrol green. The browser tab uses `src/app/icon.svg` (and `favicon.ico` for older browsers); the phone home screen uses `src/app/apple-icon.png` on iPhone and the icons in `public/icons` through `src/app/manifest.ts` on Android. Adding it to the home screen still opens the site in the browser.
+- **Sign-in page:** the form on the right and a photo of a truck on a desert road at sunset filling the rest; on phones the photo is a strip above the form. The photo was generated with Higgsfield and is served as two pre-sized WebP files in `public/photos` (800 and 1600 wide), since the image optimiser isn't set up on Cloudflare.
 - **Plates:** truck codes and load references show as small number plates (`src/components/ui/plate.tsx`, the `.plate` style) on every screen that lists them. Printed documents keep them as plain text, to stay formal and save ink.
 - **The driver's phone (`/my`):**
   - the current trip comes first: his truck's plate, the route in large type, and the start or finish button;
