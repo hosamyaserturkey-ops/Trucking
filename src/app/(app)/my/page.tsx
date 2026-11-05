@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components/ui/card";
 import { Stat, StatGrid } from "@/components/ui/stat";
-import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { Plate } from "@/components/ui/plate";
 import { DriverTripControl, WithdrawExpenseButton } from "@/components/driver-trip-card";
 
 export const metadata: Metadata = { title: "رحلاتي" };
@@ -188,21 +188,22 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
           />
           {current ? (
             <CardBody className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1 text-sm">
-                <p className="text-base font-semibold">
-                  {route?.from_name ?? "—"} ← {route?.to_name ?? "—"}
-                </p>
+              <div className="flex flex-col gap-2 text-sm">
                 {currentTruck ? (
-                  <p className="text-muted">
-                    الشاحنة <span className="num">{currentTruck.code}</span> · <span className="num">{currentTruck.plate_number}</span>
+                  <p className="flex items-center gap-2">
+                    <Plate size="lg">{currentTruck.code}</Plate>
+                    <span className="num text-muted">{currentTruck.plate_number}</span>
                   </p>
                 ) : null}
-                {current.cargo_description ? <p className="text-muted">{current.cargo_description}</p> : null}
+                <p className="font-display text-2xl leading-snug font-bold">
+                  {route?.from_name ?? "—"} ← {route?.to_name ?? "—"}
+                </p>
                 <p className="text-muted">
-                  {current.status === "in_progress" ? "بدأت" : "موعدها"}: <span className="num">{formatDate(current.start_date)}</span>
+                  {current.cargo_description ? <>{current.cargo_description} · </> : null}
+                  {current.status === "in_progress" ? "بدأت" : "موعدها"} <span className="num">{formatDate(current.start_date)}</span>
                 </p>
               </div>
-              <div className="max-w-sm">
+              <div className="sm:max-w-sm">
                 {current.status === "in_progress" ? (
                   <DriverTripControl
                     key={`finish-${current.id}`}
@@ -226,6 +227,17 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
           )}
         </Card>
 
+        <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+          <LinkButton href={current ? `/my/expense/new?trip=${current.id}` : "/my/expense/new"} variant="primary" className="min-h-14 text-lg">
+            <Plus className="size-5" aria-hidden />
+            مصروف
+          </LinkButton>
+          <LinkButton href={current ? `/my/fuel/new?trip=${current.id}` : "/my/fuel/new"} variant="primary" className="min-h-14 text-lg">
+            <Fuel className="size-5" aria-hidden />
+            تعبئة ديزل
+          </LinkButton>
+        </div>
+
         <section aria-label="العهدة" className="flex flex-col gap-3">
           <StatGrid>
             <Stat
@@ -247,16 +259,6 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
               tone={(balance?.pending_count ?? 0) > 0 ? "warning" : "neutral"}
             />
           </StatGrid>
-          <div className="grid grid-cols-2 gap-3 sm:flex">
-            <LinkButton href={current ? `/my/expense/new?trip=${current.id}` : "/my/expense/new"} variant="primary" className="py-3 text-base">
-              <Plus className="size-5" aria-hidden />
-              مصروف
-            </LinkButton>
-            <LinkButton href={current ? `/my/fuel/new?trip=${current.id}` : "/my/fuel/new"} variant="primary" className="py-3 text-base">
-              <Fuel className="size-5" aria-hidden />
-              تعبئة ديزل
-            </LinkButton>
-          </div>
         </section>
 
         <Card>
@@ -348,46 +350,33 @@ export default async function MyTripsPage({ searchParams }: { searchParams: Prom
           {trips.length === 0 ? (
             <EmptyState>لا توجد رحلات.</EmptyState>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>رقم</Th>
-                  <Th>التاريخ</Th>
-                  <Th>المسار</Th>
-                  <Th>العميل والحمولة</Th>
-                  <Th className="text-end">كم</Th>
-                  <Th>الحالة</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {trips.map((t) => {
-                  const st = TRIP_STATUS[t.status ?? "planned"];
-                  return (
-                    <Tr key={t.trip_id}>
-                      <Td className="num">{t.trip_no}</Td>
-                      <Td className="num whitespace-nowrap">{formatDate(t.start_date)}</Td>
-                      <Td className="whitespace-nowrap">
+            <ul className="divide-y divide-border">
+              {trips.map((t) => {
+                const st = TRIP_STATUS[t.status ?? "planned"];
+                return (
+                  <li key={t.trip_id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold">
                         {t.from_name} ← {t.to_name}
-                      </Td>
-                      <Td>
-                        {t.is_empty_return ? (
-                          <Badge>عودة فارغة</Badge>
-                        ) : (
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {t.is_empty_return ? "عودة فارغة" : [t.client_name, t.cargo_description].filter(Boolean).join(" · ") || "—"}
+                      </p>
+                      <p className="text-xs text-muted">
+                        رحلة <span className="num">{t.trip_no}</span> · <span className="num">{formatDate(t.start_date)}</span>
+                        {t.distance_km ? (
                           <>
-                            {t.client_name ?? "—"}
-                            <span className="block text-xs text-muted">{t.cargo_description}</span>
+                            {" · "}
+                            <span className="num">{formatInt(t.distance_km)}</span> كم
                           </>
-                        )}
-                      </Td>
-                      <Td className="num text-end">{formatInt(t.distance_km)}</Td>
-                      <Td>
-                        <Badge tone={st.tone}>{st.label}</Badge>
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+                        ) : null}
+                      </p>
+                    </div>
+                    <Badge tone={st.tone}>{st.label}</Badge>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </Card>
 

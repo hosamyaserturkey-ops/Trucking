@@ -17,6 +17,7 @@ import { DateRangeFilter } from "@/components/date-range-filter";
 import { ExportButton } from "@/components/export-button";
 import { PrintButton } from "@/components/print-button";
 import { Jod, Margin } from "@/components/report-bits";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "ربح الزبون" };
 
@@ -120,9 +121,9 @@ export default async function ClientProfitPage({ params, searchParams }: Props) 
                 {rows.map((r) => (
                   <Tr key={r.trip_id}>
                     <Td className="num whitespace-nowrap">{formatDate(r.fact_date)}</Td>
-                    <Td className="num whitespace-nowrap">
+                    <Td className="whitespace-nowrap">
                       <Link href={`/trips/${r.trip_id}`} className="hover:underline">
-                        {r.client_ref ?? `#${r.trip_no}`}
+                        {r.client_ref ? <Plate>{r.client_ref}</Plate> : <span className="num">#{r.trip_no}</span>}
                       </Link>
                       {r.entry_source === "sheet" ? (
                         <span className="ms-1">

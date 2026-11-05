@@ -46,7 +46,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
       <header className="flex items-start justify-between gap-4 border-b-2 border-text pb-3">
         <div>
-          <p className="text-lg font-bold">{company?.company_name ?? "شركة النقل"}</p>
+          <p className="font-display text-lg font-bold">{company?.company_name ?? "شركة النقل"}</p>
           {company?.address ? <p>{company.address}</p> : null}
           {company?.phone ? (
             <p>

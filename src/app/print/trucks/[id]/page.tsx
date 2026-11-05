@@ -44,7 +44,7 @@ export default async function TruckStatementPage(props: TruckPageProps) {
 
       <header className="flex items-start justify-between gap-4 border-b-2 border-text pb-3">
         <div>
-          <p className="text-lg font-bold">{settingsRes.data?.company_name ?? "شركة النقل"}</p>
+          <p className="font-display text-lg font-bold">{settingsRes.data?.company_name ?? "شركة النقل"}</p>
           <h1 className="text-xl font-bold">كشف حساب الشاحنة</h1>
         </div>
         <div className="text-start text-sm">

@@ -14,6 +14,7 @@ import { Card, CardBody, CardHeader, EmptyState, PageHeader } from "@/components
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { ExportButton } from "@/components/export-button";
 import { ConfirmButton, ServiceScheduleForm } from "@/components/work-order-forms";
+import { Plate } from "@/components/ui/plate";
 
 export const metadata: Metadata = { title: "الصيانة الدورية" };
 
@@ -121,9 +122,9 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                   const wo = s.work_order as unknown as { wo_no: number } | null;
                   return (
                     <Tr key={s.id} className={s.is_active ? "" : "text-muted"}>
-                      <Td className="num whitespace-nowrap font-semibold">
-                        <Link href={`/trucks/${s.truck_id}/maintenance`} className="hover:underline">
-                          {s.code}
+                      <Td className="whitespace-nowrap">
+                        <Link href={`/trucks/${s.truck_id}/maintenance`}>
+                          <Plate>{s.code}</Plate>
                         </Link>
                       </Td>
                       <Td>{s.service_name}</Td>

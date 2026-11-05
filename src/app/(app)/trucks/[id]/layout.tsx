@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { TruckTabs } from "@/components/truck-tabs";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { PrintLink } from "@/components/print-link";
+import { Plate } from "@/components/ui/plate";
 
 export default async function TruckLayout({
   children,
@@ -35,7 +36,7 @@ export default async function TruckLayout({
         <div className="min-w-0">
           <p className="text-sm text-muted">ملف الشاحنة</p>
           <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
-            <span className="num">{truck.code}</span>
+            <Plate size="lg">{truck.code}</Plate>
             <span className="num text-base font-medium text-muted">{truck.plate_number}</span>
             <Badge tone={status.tone}>{status.label}</Badge>
           </h1>

@@ -45,7 +45,7 @@ export default async function StatementPrintPage({ params, searchParams }: { par
 
       <header className="flex items-start justify-between gap-4 border-b-2 border-text pb-3">
         <div>
-          <p className="text-lg font-bold">{settingsRes.data?.company_name ?? "شركة النقل"}</p>
+          <p className="font-display text-lg font-bold">{settingsRes.data?.company_name ?? "شركة النقل"}</p>
           <h1 className="text-xl font-bold">كشف حساب: {st.title}</h1>
           {party ? <p className="text-sm">{party}</p> : null}
         </div>
